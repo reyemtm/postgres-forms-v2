@@ -1,0 +1,241 @@
+  /****
+  Make the default mapbox controls larger, smaller box shadow and less rounded.
+  ****/
+
+  .mapboxgl-ctrl-group>button {
+    width: 36px;
+    height: 36px;
+  }
+  .mapboxgl-ctrl-group:not(:empty) {
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+    border-radius: 2px;
+  }
+
+  /* .mapboxgl-ctrl-top-right {
+    right: -100px;
+  }
+  .mapboxgl-ctrl-top-left {
+    left: -100px
+  }
+  .mapboxgl-ctrl-top-right,
+  .mapboxgl-ctrl-top-left {
+    transition: 0.3s ease-in-out;
+    height: 100vh;
+    min-width: 60px;
+  }
+
+  .mapboxgl-ctrl-top-right.visible {
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.3);
+    width: 60px;
+  } */
+
+  /****
+  ****/
+
+  .mgl-layerControl {
+    font-size: 16px;
+  }
+
+  /****
+  * COLLAPSED
+  ****/
+
+  .mgl-layerControl.collapsed {
+    width: 36px;
+    height: 36px;
+    overflow: hidden;
+    background-image: url("https://icongr.am/material/layers.svg");
+    background-size: cover;
+    background-position: center;
+  }
+
+  .mgl-layerControl.collapsed > div {
+    display: none;
+  }
+
+  .mgl-layerControl:not(.collapsed) > img {
+    display: none;
+  }
+
+  .mgl-layerControl:not(.collapsed) {
+    height: auto;
+    width:  calc(100% + 20px);
+    overflow-x: hidden;
+    display: block;
+    overflow-y: auto;
+  }
+
+  /****
+  ****/
+  .mgl-layerControlLegend {
+    margin-right: 4px;
+    padding-right: 4px;
+  }
+  .mgl-layerControlGroupHeading {
+    font-weight: 600;
+    font-size: 18px;
+    cursor: pointer;
+    display: inline-flex;
+  }
+
+  .mgl-layerControl button {
+    width: 30px;
+    height: 30px;
+    border: none;
+    opacity: 0.6;
+    float: left;
+    background-size: 20px;
+    background-position: center center;
+    background-color: transparent;
+    background-repeat: no-repeat;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' version='1.1' id='mdi-minus' width='32' height='32' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M19,13H5V11H19V13Z'/%3E%3C/svg%3E");  }
+
+  .mgl-layerControl button.collapsed {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' version='1.1' id='mdi-plus' width='32' height='32' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z'/%3E%3C/svg%3E");
+   }
+
+  .mgl-layerControl icon {
+    margin-right: 6px
+  }
+
+  .mgl-layerControlLegend:not(label) {
+    margin-left: 20px;
+    max-width: calc(100% - 32px);
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .mgl-layerControlDirectory {
+    transition: height 0.4s ease-in-out;
+    height: auto;
+    overflow: hidden;
+    border-bottom: solid thin #e0e0e0;
+  }
+
+  .mgl-layerControlDirectory > .directory {
+    font-size: 18px;
+    background: #f8f9fa;
+    padding: 5px;
+    cursor: pointer;
+  }
+
+  .mgl-layerControl .checkbox,
+  .mgl-layerControl button,
+  .mgl-layerControl .layer.side-toggle,
+  .mgl-layerControl label {
+    cursor: pointer;
+  }
+
+  .mgl-layerControl .checkbox {
+    margin: 6px 4px;
+  }
+  /*https://codepen.io/takeradi/pen/rjJpKK*/
+
+  /* .checkbox input[type="checkbox"] {
+    opacity: 0;
+    width: 0;
+  }
+
+  .checkbox input[type="checkbox"] {
+    opacity: 0;
+    width: 0;
+  }
+
+  .checkbox label {
+    position: relative;
+    display: inline-block;
+    padding-left: 22px;
+  }
+
+  .checkbox label::before,
+  .checkbox label::after {
+    position: absolute;
+    content: "";
+    display: inline-block;
+  }
+
+  .checkbox label::before {
+    height: 14px;
+    width: 14px;
+    border: 1px solid;
+    border-radius: 2px;
+    left: 0px;
+    top: 3px;
+  }
+
+  .checkbox label::after {
+    height: 4px;
+    width: 9px;
+    border-left: 2px solid;
+    border-bottom: 2px solid;
+
+    transform: rotate(-45deg);
+
+    left: 3px;
+    top: 7px;
+  }
+
+  .checkbox input[type="checkbox"]+label::after {
+    content: none;
+    color: white;
+  }
+
+  .checkbox input[type="checkbox"]:checked+label::after {
+    content: "";
+  }
+
+  .checkbox input[type="checkbox"]:checked+label::before {
+    background: #121212;
+  }
+
+  .checkbox input[type="checkbox"]:focus+label::before {
+    outline: rgb(59, 153, 252) auto 5px;
+  } */
+
+  /****
+INPUT SLIDERS
+****/
+
+input.slide-toggle {
+  margin: 0 6px 0 0;
+  cursor: pointer;
+  border: solid thin #ccc;
+  position: relative;
+  -webkit-appearance: none;
+  outline: none;
+  width: 26px;
+  height: 10px;
+  background-color: #eee;
+  border-radius: 25px;
+  transition: 0.2s;
+  background-clip: padding-box;
+}
+
+input.slide-toggle:after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: 0px;
+  background: #fff;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: 0 0 1px 2px #ccc;
+  transition: 0.2s;
+}
+
+input.slide-toggle:focus {
+  border-color: #0d84b3; 
+  box-shadow: 0 0 0 0.1rem rgba(13,132,179,.2);
+}
+
+input.slide-toggle:checked {
+  background: #0d84b3;
+  border-color: #0d84b3;
+}
+
+input.slide-toggle:checked:after {
+  left: 14px;
+  box-shadow: 0 0 1px 2px #0d84b3;
+}

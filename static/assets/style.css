@@ -1,0 +1,144 @@
+body {
+  margin: 0;
+  padding: 0;
+}
+
+/*MAP STYLES AND MAPBOX TWEAKS TO MAKE BUTTONS USABLE ON MOBILE*/
+#map {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+}
+.mapboxgl-popup {
+  max-width: 100%!important;
+}
+.mapboxgl-popup-content {
+  font-size: larger;
+}
+.mapboxgl-popup-content div {
+  width: 100%;
+}
+.mapboxgl-ctrl-group:not(:empty),
+.mapboxgl-ctrl-geocoder.mapboxgl-ctrl {
+  -moz-box-shadow: 0 0 1px rgba(0, 0, 0, .1);
+  -webkit-box-shadow: 0 0 1px rgba(0, 0, 0, .1);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .1);
+  border-radius: 2px;
+}
+.mapboxgl-ctrl-group>button {
+  width: 36px;
+  height: 37px;
+}
+/*TWEAKS TO GET RID OF MOBILE CSS STYLES FOR GEOCODER*/
+.mapboxgl-ctrl-geocoder--input {
+  height: 36px;
+  padding: 6px 35px;
+}
+.mapboxgl-ctrl-geocoder--icon-search {
+  top: 8px;
+  left: 7px;
+  width: 20px;
+  height: 20px;
+}
+.mapboxgl-ctrl-geocoder--icon-close {
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  margin-right: 0;
+}
+/**/
+
+/*NAVBAR, LOADING, MODAL AND FORM STYLE TWEAKS FROM SPECTRE CSS*/
+.loading {
+  position: fixed;
+  height: 100vh;
+  width: 100%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  transform: -moz-translate(-50%, -50%);
+  transform: -ms-translate(-50%, -50%);
+  background: rgba(255,255,255,0.6);
+  z-index: 4;
+}
+.loading:after {
+  width: 3rem;
+  height: 3rem;
+  border: 0.2rem solid #0275d8;
+  border-right-color: rgba(255,255,255,0.6);
+  border-top-color:  rgba(255,255,255,0.6);
+  margin-left: -1.5rem;
+  margin-top: -1.5rem;
+}
+/*---*/
+.navbar {
+  padding: 0.25rem 0.5rem
+}
+.navbar-brand {
+  color:#121212;
+}
+.navbar-section {
+  z-index: 3;
+}
+/*---*/
+.modal {
+  position: unset;
+  padding: 2rem
+}
+
+.modal:target {
+  opacity: 1;
+  z-index: 400;
+  -webkit-transition: opacity .4s ease-in;
+  -moz-transition: opacity .4s ease-in;
+  -o-transition: opacity .4s ease-in;
+  transition: opacity 0.4s ease-in;
+}
+.modal.active .modal-container,
+.modal:target .modal-container {
+  animation: slide-down 0.4s ease 1;
+  z-index: 2;
+}
+.modal:target .modal-overlay {
+  opacity: 0.4;
+}
+.modal-container {
+  max-height: 90vh;
+}
+/*---*/
+form label {
+  font-weight: 600;
+}
+form input {
+  width: 100%;
+}
+/*---*/
+.btn.btn-primary {
+  background: #32b643;
+  border-color: #32b643;
+}
+.btn.btn-primary:hover, .btn.btn-primary:focus {
+  background: rgba(50, 182, 67, 0.8);
+  border-color: rgb(50, 182, 67, 0.8);
+}
+.btn.btn-outline {
+  color: #303742;
+  border-color: #303742;
+}
+.btn.btn-outline:focus, .btn.btn-outline:hover {
+  background: #303742;
+  color: white;
+}
+.btn.btn-outline:active {
+  background-color: white;
+}
+.btn.btn-red {
+  color: firebrick;
+  border-color:firebrick
+}
+.btn.btn-red:hover, .btn.btn-red:focus {
+  background: firebrick;
+  color: white;
+}
+/**/

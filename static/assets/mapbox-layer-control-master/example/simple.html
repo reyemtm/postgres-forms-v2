@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset='utf-8' />
+  <title>Mapbox Layer Control Example</title>
+  <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mapbox-gl/1.4.0/mapbox-gl.js" integrity="sha256-4vgPjIfsjmay+xrYNgX79wO5pIHcSKoCWJKwNmoqcms=" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mapbox-gl/1.4.0/mapbox-gl.css" integrity="sha256-t2fYcalxXkJ++B2YwGcM5KYrF8Fu9vCcO69LI16Q5Y0=" crossorigin="anonymous" />
+  <link rel="stylesheet" href="../layerControl.css">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    #map {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 100%;
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <div id='map'></div>
+  <script type="module">
+    import { layerControlSimple } from "../layerControlSimple.js"
+import { layerControlGrouped } from "../layerControlGrouped.js"
+
+
+/*Blank Mapbox GL Map*/
+
+var map = new mapboxgl.Map({
+  container: 'map',
+  hash: true,
+  /*style: 'some mapbox style url*/
+  /*below is a blank style*/
+  style: {
+    "version": 8,
+    "name": "blank",
+    "sources": {
+      "blank": {
+        "type": "vector",
+        "url": ""
+      }
+    },
+    "layers": [{
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "skyblue"
+      }
+    }]
+  },
+  center: [-97.56, 39.59],
+  zoom: 4.68,
+  debug: 1
+});
+map.addControl(new mapboxgl.NavigationControl());
+map.addControl(new mapboxgl.FullscreenControl());
+
+map.on('style.load', function() {
+  map.addSource('counties', {
+    'type': 'geojson',
+    /*many types of data can be added, such as geojson, vector tiles or raster data*/
+    'data': 'counties.min.geojson'
+  });
+
+  /*here we are adding a source, then a layer based on that that source*/
+
+  map.addLayer({
+    'id': 'Counties',
+    'type': 'fill',    /*define the type of layer fill, line, point, fill-extrusion, background, raster, circle*/
+    'source': 'counties',
+    'layout': {
+      'visibility': 'visible'
+    },
+    
+    /*there are many options for styling - this is a simple style*/
+
+    'paint': {
+      'fill-color': 'lightgray',
+      'fill-outline-color': 'white',
+      'fill-opacity': 0.9
+    }
+  });
+
+  map.addLayer({
+    'id': 'States',
+    'type': 'line',    /*define the type of layer fill, line, point, fill-extrusion, background, raster, circle*/
+    'source': {
+      type: "geojson",
+      data: "states.geojson"
+    },
+    'layout': {
+      'visibility': 'none'
+    },
+    
+    /*there are many options for styling - this is a simple style*/
+
+    'paint': {
+      'line-color': '#121212',
+    }
+  });
+
+  map.addLayer({
+    'id': 'Lakes',
+    'type': 'fill',    /*define the type of layer fill, line, point, fill-extrusion, background, raster, circle*/
+    'source': {
+      type: "geojson",
+      data: "lakes.json"
+    },
+    'layout': {
+      'visibility': 'none'
+    },
+    
+    /*there are many options for styling - this is a simple style*/
+
+    'paint': {
+      'fill-color': 'blue',
+      'fill-outline-color': 'white',
+      'fill-opacity': 0.9
+    }
+  });
+
+  map.addControl( new layerControlSimple({
+    layers: ["Lakes", "States", "Counties"]
+  }), "top-left");
+});
+
+
+
+/*End Blank Map*/
+
+</script>
+
+</body>
+
+</html>
