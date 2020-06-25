@@ -123,7 +123,9 @@ if (!localStorage.getItem("coz--zoning-updates")) {
 //APPS IS PUBLIC, ANYTHING UNDER APPS/COZ IS SECURED BY WINDOWS READ/WRITE SECTURIY ON THE SERVER FOR THE FOLDER COZ
 //////////////////////////////////
 Promise.all([
-  fetch("../get-table?table=dev_zoning_table"),
+  fetch("../get-table?table=dev_zoning_table", {
+    cache: "reload"
+  }),
   // fetch("/apps/get-table?table=adm_mus_parcels&fields=id,parcelnum"),
   // fetch("https://311.coz.org/data/geocoders/parcelsGeocoder.json"),
   fetch("https://gis.coz.org/map-layers-config.json")

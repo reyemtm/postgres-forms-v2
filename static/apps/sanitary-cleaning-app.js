@@ -374,7 +374,7 @@ function checkCleaned(map, geojson, data) {
   if (data) {
     markCleaned(map, geojson, data)
   } else {
-    fetch("../../get-table?table=utl_sanitary_lines_cleaning", {
+    fetch("../get-table?table=utl_sanitary_lines_cleaning", {
       cache: "reload"
     })
       .then(res => {
@@ -502,7 +502,7 @@ function formSubmit(map) {
     form.addEventListener("submit", function(e) {
       e.preventDefault();
       var data = new URLSearchParams(new FormData(form));
-      fetch('/sanitary-cleaning', {
+      fetch('../sanitary-cleaning', {
           method: 'post',
           body: data,
         })
