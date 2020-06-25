@@ -1,45 +1,46 @@
-class welcomeMessageButton {
+class mglMessageButton {
 
   constructor(options) {
     console.log(options)
-    this.options = {
-      modalTitle: (!options.modalTitle) ? "Modal" : options.modalTitle
-    };
-
+    options.title = (!options.title) ? "Welcome" : options.title
+    options.message = (!options.message) ? "This is a description." : options.message
     this.onAdd = function (map) {
       console.log(this);
       //CREATE WELCOME MESSAGE MODAL
 
-      (function welcomeMessageModal () {
-        return `
-        <div class="modal" id="welcomeMessageModal">
+      function mglMessageButtonModal () {
+        let modal = document.createElement("div");
+        modal.classList = "modal"
+        modal.id = "welcome"
+        let html = `
           <a href="#close" class="modal-overlay" aria-label="Close"></a>
           <div class="modal-container">
             <div class="modal-header">
               <a href="#close" class="btn btn-clear float-right" aria-label="Close"></a>
-              <div class="modal-title h5">${this.options.modalTitle}</div>
+              <div class="modal-title h5">${options.title}</div>
             </div>
             <div class="modal-body">
               <div class="content" style="text-align: justify">
-                ${this.options.modalDescription}
+                ${options.message}
               </div>
             </div>
             <div class="modal-footer">
             </div>
-          </div>
-        </div>`
-      })()
+          </div>`
+          modal.innerHTML = html;
+          document.body.appendChild(modal);
+      }
 
       this._map = map;
       this._btn = document.createElement('button');
-      this._btn.id = "welcomeMessageButton";
+      this._btn.id = "mglMessageButton";
       this._btn.type = 'button';
       this._btn.innerHTML = '&#x3f;';
       this._btn.style.fontWeight = 'bold';
       this._btn.style.fontSize = '1.2rem';
       this._btn['aria-label'] = 'Show Welcome Message';
       this._btn.onclick = function () {
-        // if (document.querySelector("#welcomeMessageModal")) welcomeMessageModal()
+        if (!document.querySelector("#welcome")) mglMessageButtonModal()
         window.location.hash = "#welcome";
       };
       this._container = document.createElement('div');
@@ -56,5 +57,5 @@ class welcomeMessageButton {
 }
 
 export {
-  welcomeMessageButton
+  mglMessageButton
 }

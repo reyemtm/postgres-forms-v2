@@ -3,6 +3,10 @@
 // import InspectControl from '../../mapbox-gl-controls/lib/inspect.js';
 /**/
 
+import {
+  mglMessageButton
+} from '../assets/mglMessageButton.js'
+
 /*ON FIRST RUN SHOW THE WELCOME MODAL HARD CODED ON THE INDEX PAGE*/
 if (!localStorage.getItem("sanitary-cleaning")) {
   window.location.hash = "#welcome";
@@ -26,7 +30,7 @@ function modal() {
           <div class="content"> \
             <form action="#" method="post"> \
               <div class="form-group"> \
-                <input class="form-input" id="date" type="text" name="date"  readonly="true"> \
+                <input class="form-input" id="date2" type="datetime" name="date2"> \
               </div> \
               <div class="form-group"> \
                 <input  class="form-input" type="number" id="pipe_id" name="pipe_id"  readonly="true"></input> \
@@ -58,7 +62,7 @@ function modal() {
 
 modal()
 
-fetch("../../get-table?table=utl_sanitary_lines&format=geojson")
+fetch("../get-table?table=utl_sanitary_lines&format=geojson")
   .then(res => {
     return res.json()
   })
@@ -306,8 +310,16 @@ function initMap(geojson) {
 
       map.addControl(gps)
 
-      map.addControl(new showWelcomeMessage(), 'top-right')
-
+      //////////////////////////////////
+      //ADD HELP WINDOW WELCOME MESSAGE
+      //////////////////////////////////
+      map.addControl(new mglMessageButton({
+        title: 'COZ Sanitary Line Cleaning App',
+        message: `<p>
+        The dark green lines are the active area for cleaning. The lighter colored lines are outside the active area. Any line can be marked as cleaned, even lines outside this active area.<br><br>To mark a line as cleaned, simply click on the line and the tap the <code>Mark as Cleaned</code> button. Once a line has been marked as cleaned, it cannot be marked as cleaned again or undone. If you need to unmark a line, click on it, copy the <code>Pipe ID</code> and send that to the email below. Once an area has been completed contact GIS.</p>
+        <p>
+        This application is developed and maintained by the City of Zanesville. If you have any questions or have issues with the app please email <a href="mailto:malcolm.meyer@coz.org?subject=CleaningApp">GIS</a> or call 740-617-4876.</p>`
+      }), 'top-right')
 
       // document.getElementById('geocoder').appendChild(geocoder.onAdd(map));
       // document.getElementById('geocoder').appendChild(gps.onAdd(map));
@@ -441,7 +453,8 @@ function clickListener(map, e, highlightId) {
 }
 
 function modalSetValues(props) {
-  document.querySelector("#date").value = new Date();
+  // document.querySelector("#date").value = new Date();
+  document.querySelector("#date2").value = moment().format()
   document.querySelector("#pipe_id").value = props.id;
   document.querySelector("#pipe_uuid").value = props.uuid;
   document.querySelector("#pipe_fieldid").value = props.pipeid;
@@ -532,28 +545,28 @@ function formReset(form) {
 
 
 
-class showWelcomeMessage {
-  constructor() {
-    this.onAdd = function (map) {
-      this._map = map;
-      this._btn = document.createElement('button');
-      this._btn.id = "showWelcomeMessage";
-      this._btn.type = 'button';
-      this._btn.innerHTML = '&#x3f;';
-      this._btn.style.fontWeight = 'bold';
-      this._btn.style.fontSize = '1.2rem';
-      this._btn['aria-label'] = 'Show Welcome Message';
-      this._btn.onclick = function () {
-        window.location.hash = "#welcome";
-      };
-      this._container = document.createElement('div');
-      this._container.className = 'mapboxgl-ctrl mapboxgl-ctrl-group';
-      this._container.appendChild(this._btn);
-      return this._container;
-    };
-    this.onRemove = function () {
-      this._container.parentNode.removeChild(this._container);
-      this._map = undefined;
-    };
-  }
-}
+// class showWelcomeMessage {
+//   constructor() {
+//     this.onAdd = function (map) {
+//       this._map = map;
+//       this._btn = document.createElement('button');
+//       this._btn.id = "showWelcomeMessage";
+//       this._btn.type = 'button';
+//       this._btn.innerHTML = '&#x3f;';
+//       this._btn.style.fontWeight = 'bold';
+//       this._btn.style.fontSize = '1.2rem';
+//       this._btn['aria-label'] = 'Show Welcome Message';
+//       this._btn.onclick = function () {
+//         window.location.hash = "#welcome";
+//       };
+//       this._container = document.createElement('div');
+//       this._container.className = 'mapboxgl-ctrl mapboxgl-ctrl-group';
+//       this._container.appendChild(this._btn);
+//       return this._container;
+//     };
+//     this.onRemove = function () {
+//       this._container.parentNode.removeChild(this._container);
+//       this._map = undefined;
+//     };
+//   }
+// }

@@ -2,7 +2,7 @@ const env = require("dotenv").config().parsed
 
 module.exports = {
   method: 'POST',
-  url : '/coz/zoning-updates',
+  url : '/zoning-updates',
   handler: function(req, res) {
     if (env.ENVIRONMENT === "PRODUCTION") {
       if (!req.headers.authorization) {

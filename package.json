@@ -22,6 +22,7 @@
     "fastify-static": "^2.6.0",
     "pg": "^7.18.1",
     "pino-pretty": "^3.5.0",
+    "point-of-view": "^3.8.0",
     "uuid": "^3.4.0"
   },
   "devDependencies": {

@@ -1,3 +1,5 @@
+const env = require("dotenv").config().parsed
+
 module.exports = function (fastify, opts, next) {
 
   fastify.post('/site-plans', function(req, res) {

@@ -1,4 +1,5 @@
 const env = require("dotenv").config().parsed
+const fs = require("fs");
 
 if (env.ENVIRONMENT === "DEVELOPMENT") {
   console.log("Starting app using the following env varibales \n", env)
@@ -38,12 +39,12 @@ const fastify = require("fastify")({
   root: path.join(__dirname, 'static'),
   // prefix: "/apps/",
   redirect: false
-})
+});
 
-//TODO after redirecting to /apps/ remove these lines
-// .get('/coz/sanitary-cleaning', (req, res) => {
-//   res.redirect('/apps/coz/sanitary-cleaning/')
-// });
+fastify.setNotFoundHandler(function(request, reply) {
+  reply.type("text/html")
+  reply.send(fs.readFileSync('static/404.html'))
+});
 
 fastify.listen(PORT, function(err, address) {
   if (err) {

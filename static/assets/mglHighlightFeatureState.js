@@ -1,7 +1,7 @@
 let highlightFeature = {};
 
 function mglHighlightFeatureState(map, layer, source) {
-  console.log(highlightFeature)
+  // console.log(highlightFeature)
   /**
    * ONLY ADD DOCUMENT AND WINDOW EVENT LISTENERS ONCE
    */

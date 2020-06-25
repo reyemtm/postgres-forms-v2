@@ -1,12 +1,16 @@
 var zoningTable, zoningFeatureStateId, zoningPaintTable, zoningSchema;
 
+//////////////////////////////////
+//IMPORTS ARE RELATIVE TO WHERE THE PAGE ON WHICH THE APP IS LOADED WHICH IS WHY THESE ARE ALL RELATIVE LINKS
+//////////////////////////////////
+
 import {
   layerControlGrouped
 } from "../assets/mapbox-layer-control-master/layerControlGrouped.js"
 
 import {
-  welcomeMessageButton
-} from '../assets/welcomeMessageButton.js'
+  mglMessageButton
+} from '../assets/mglMessageButton.js'
 
 import {
   inputFormModal,
@@ -316,8 +320,9 @@ function initMap(data) {
     //////////////////////////////////
     //ADD HELP WINDOW WELCOME MESSAGE
     //////////////////////////////////
-    map.addControl(new welcomeMessageButton({
-      test: true
+    map.addControl(new mglMessageButton({
+      title: 'Zoning Table Updates',
+      message: 'This app updates the zoning table stored in the GIS database. Writes to this app will be published the following day on the official zoning web map. If you have any questions please contact GIS.'
     }), 'top-right')
 
     //////////////////////////////////
@@ -535,7 +540,6 @@ function zoningTableUpdate(data, table) {
   table.map((t,i) => {
     if (table[i].parcelnum === obj.parcelnum) {
       table[i] = obj;
-      updatedTable[i] = obj;
       match = true;
     }
   });
