@@ -42,7 +42,7 @@ zoningPaintTable = {
   "C-2": "INDIANRED",
   "C-3": "CRIMSON",
   "C-4": "MAROON",
-  "I-1": "SLATEGRAY",
+  "I-1": "GRAY",
   "O-1": "VIOLET",
   "O-2": "MAGENTA",
   "AE":  "YELLOWGREEN",
@@ -187,8 +187,8 @@ function initMap(data) {
     },
     "source-layer": "COZ_AdminBoundary_wgs84",
     "paint": {
-      "fill-color": "white",
-      "fill-opacity": 0.9
+      "fill-color": "whitesmoke",
+      "fill-opacity": 0.99
     },
     "layout": {
       "visibility": "none"
