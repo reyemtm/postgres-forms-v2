@@ -42,12 +42,12 @@ zoningPaintTable = {
   "C-2": "INDIANRED",
   "C-3": "CRIMSON",
   "C-4": "MAROON",
-  "I-1": "GRAY",
+  "I-1": "SLATEGRAY",
   "O-1": "VIOLET",
   "O-2": "MAGENTA",
   "AE":  "YELLOWGREEN",
   "PUD": "PURPLE",
-  "9999": "BLACK"
+  "9999": "lightgray"
 }
 
 //////////////////////////////////
@@ -154,8 +154,8 @@ function zoningPaintExpression(table) {
       parcels.push(row.parcelnum);
     }
   });
-  expression.push('rgba(0,0,0,0)');
-  // console.log(expression)
+  expression.push('COMMON AREA', "lightgray")
+  expression.push('black');
   return expression
 }
 
@@ -187,7 +187,7 @@ function initMap(data) {
     },
     "source-layer": "COZ_AdminBoundary_wgs84",
     "paint": {
-      "fill-color": "whitesmoke",
+      "fill-color": "white",
       "fill-opacity": 0.9
     },
     "layout": {
@@ -385,16 +385,17 @@ function clickListener(map, e, table) {
         props[0] = {
           id: 0,
           parcelnum: features[0].properties.parcelnum,
-          owner: features[0].properties.owner_contact_name,
           address: features[0].properties.address,
           edit_date: new Date(),
           zoning_code: "",
           zoning_notes: "",
           zoning_ord: "",
           zoning_ord_date: "",
-          zoning_ord_text: ""
+          zoning_ord_text: "",
+          owner: features[0].properties.owner_contact_name,
+          split: features[0].properties.split,
         }
-        if (props[0].parcelnum === "WW" || !props[0].parcelnum || props[0].parcelnum === undefined || props[0].parcelnum == "9") return
+        if (props[0].parcelnum === "WW" || props[0].parcelnum === "RR" || !props[0].parcelnum || props[0].parcelnum === undefined || props[0].parcelnum == "9") return
 
         popup
         .setLngLat(e.lngLat)
@@ -405,7 +406,8 @@ function clickListener(map, e, table) {
         //LET THE DB KNOW THAT THIS HAS BEEN UPDATED ON THE CLIENTSIDE
         if (props[0].id === "0") props[0].id = -1;
 
-        props[0].owner = features[0].properties.owner_contact_name
+        props[0].owner = features[0].properties.owner_contact_name;
+        props[0].split = features[0].properties.split;
         inputFormModalSetValues(props[0]);
 
         //SHOW POPUP FIRST WITH DATA AND ADD LINK TO SHOW INPUT MODAL FOR DATA
