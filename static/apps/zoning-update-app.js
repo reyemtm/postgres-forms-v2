@@ -183,9 +183,10 @@ function initMap(data) {
     "source": "adminSource",
     "sourceType": {
       "type": "vector",
-      "url": "mapbox://cozgis.86cc2b8d"
+      "tiles": ["https://311.coz.org/data/vt/adm_admin_boundaries/{z}/{x}/{y}.mvt"],
+      "maxzoom": 17
     },
-    "source-layer": "COZ_AdminBoundary_wgs84",
+    "source-layer": "adm_admin_boundaries",
     "paint": {
       "fill-color": "whitesmoke",
       "fill-opacity": 0.99
@@ -193,7 +194,7 @@ function initMap(data) {
     "layout": {
       "visibility": "none"
     },
-    "filter": ["!=", ["get", "NAME"], "ZANESVILLE"]
+    "filter": ["!=", ["get", "name"], "ZANESVILLE"]
   }
 
   var maskOutline = {
@@ -208,9 +209,10 @@ function initMap(data) {
     "source": "adminSource",
     "sourceType": {
       "type": "vector",
-      "url": "mapbox://cozgis.86cc2b8d"
+      "tiles": ["https://311.coz.org/data/vt/adm_admin_boundaries/{z}/{x}/{y}.mvt"],
+      "maxzoom": 17
     },
-    "source-layer": "COZ_AdminBoundary_wgs84",
+    "source-layer": "adm_admin_boundaries",
     "paint": {
       "line-color": "black",
       "line-width": 4
@@ -218,7 +220,7 @@ function initMap(data) {
     "layout": {
       "visibility": "none"
     },
-    "filter": ["==", ["get", "NAME"], "ZANESVILLE"]
+    "filter": ["==", ["get", "name"], "ZANESVILLE"]
   }
 
   data[1].push(mask)
