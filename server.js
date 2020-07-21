@@ -15,9 +15,13 @@ const fastify = require("fastify")({
   logger: (env.ENVIRONMENT === "DEVELOPMENT") ? {
     prettyPrint: true,
     level: "info"
-  } : false,
+  } : {
+    prettyPrint: true,
+    level: "error"
+  },
   ignoreTrailingSlash: false
 })
+.register(require('fastify-file-upload'))
 .register(require('fastify-formbody'))
 .register(require('fastify-postgres'), {
   connectionString: DB

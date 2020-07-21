@@ -44,10 +44,10 @@ module.exports = {
   handler: function(req, res) {
     console.log(req.params)
 
-    let apps = ["sanitary-cleaning", "zoning-updates"];
+    let apps = ["sanitary-cleaning", "zoning-updates", "site-plans"];
     if (apps.indexOf(req.params.params) > -1) {
-      let title = (req.params.params === "sanitary-cleaning") ? "Sanitary Cleaning Map" : "Zoning Update Map";
-      let app = (req.params.params === "sanitary-cleaning") ? "sanitary-cleaning-app.js" : "zoning-update-app.js"
+      let title = req.params.params.toUpperCase()
+      let app = req.params.params + "-app.js"
 
       let html = mapTemplate(title, app)
       res.type("text/html")

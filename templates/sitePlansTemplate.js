@@ -1,7 +1,8 @@
 // TODO add map of points
 // TODO add edit for single point
 
-function siteplans(data, values, error) {
+function siteplans(data, v, error) {
+  console.log(data)
   return `<!doctype html>
   <html lang="en">
   <head>
@@ -36,6 +37,7 @@ function siteplans(data, values, error) {
   <form method="post" action="/site-plans">
     ${data.map((d,i) => {
       var keys = Object.keys(d);
+      var values = Object.values(d)
       if (i === 0) {
         return `
             ${keys.map(k => `
