@@ -14,7 +14,8 @@ body {
   max-width: 100%!important;
 }
 .mapboxgl-popup-content {
-  font-size: larger;
+  font-size: 14px;
+  line-height: 21px;
 }
 .mapboxgl-popup-content div {
   width: 100%;

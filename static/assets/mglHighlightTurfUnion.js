@@ -1,4 +1,4 @@
-import { union } from "./turf.es.min.js"
+import { union } from "../vendor/turf.es.min.js"
 
 function highlight(map, features) {
   

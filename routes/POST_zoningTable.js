@@ -42,7 +42,7 @@ module.exports = {
         return client.query(`
         INSERT INTO dev_zoning_table (parcelnum, parcel_address, edit_date, zoning_code, zoning_ord, zoning_ord_date, zoning_ord_text, zoning_notes)
         VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`, 
-        [r.parcelnum, r.address, new Date(), r.zoning_code, r.zoning_ord, r.zoning_ord_date, r.zoning_ord_text, r.zoning_notes])
+        [r.parcelnum, r.parcel_address, new Date(), r.zoning_code, r.zoning_ord, r.zoning_ord_date, r.zoning_ord_text, r.zoning_notes])
       }
 
     },

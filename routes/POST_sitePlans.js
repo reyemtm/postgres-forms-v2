@@ -52,22 +52,37 @@ module.exports = {
       if (r.id === "0") {
       
         /*MOVE ALL VERIFICATION TO CLIENT SIDE BUT KEEP THIS HERE FOR SQL INJECTION*/
-        var x = Number(r.x);
-        var y = Number(r.y);
+        // var x = Number(r.x);
+        // var y = Number(r.y);
 
-        if (typeof(x) != "number" || typeof(y) != "number" || Number.isNaN(x) || Number.isNaN(y)) {
-          throw new Error("error no coordinates")
-        }
+        // if (typeof(x) != "number" || typeof(y) != "number" || Number.isNaN(x) || Number.isNaN(y)) {
+        //   throw new Error("error no coordinates")
+        // }
 
         var transformation = '+proj=lcc +lat_1=40.03333333333333 +lat_2=38.73333333333333 +lat_0=38 +lon_0=-82.5 +x_0=600000 +y_0=0 +ellps=GRS80 +towgs84=-0.9956,1.9013,0.5215,0.025915,0.009246,0.011599,-0.00062 +units=us-ft +no_defs'
 
         console.log("adding site plan")
 
-        var coords = proj4(transformation, [x,y]);
+        //TODO CONVERTING THE TYPE OF POLYGON TO NEED TO LOOP THROUGH ALL THE COORDINATES AND CONVERT THEM ONE BY ONE TO NAD83
+        //TODO OPTIONALLY ADD A CENTROID TO THE CENTROID, CONVERTING IT AS WELL, BUT THIS COULD BE ADDED AT ANOTHER TIME, SUCH AS WHEN QUERYING THE DATA OR ADDING TO A MAP
+        //TODO TRY USING A NODE PACKAGE CALLED REPROJECT
 
-        console.log(coords)
+        function reproject(feature) {
+          var geometry = {
+            type: "Polygon",
+            coordinates: []
+          }
+          feature.geometry.coordinates.map(coords => {
+            geometry.coordinates.push(proj4(transformation, coords))
+          })
+          return geometry
+        }
 
-        return client.query(`INSERT INTO eng_site_plans (title, parcelnum, address, year, date_approved, filename, geom) VALUES ($1, $2, $3, $4, $5, ST_GeomFromText('Point(${coords[0]} ${coords[1]})', 3735) ) RETURNING id`, [r.title, r.parcelnum, r.address,  r.year, r.date_approved, filename])
+        console.log(reproject(req.body.bounding_box))
+
+        // var coords = proj4(transformation, [x,y]);
+
+        // return client.query(`INSERT INTO eng_site_plans (title, parcelnum, address, year, date_approved, filename, geom) VALUES ($1, $2, $3, $4, $5, ST_GeomFromText('Point(${coords[0]} ${coords[1]})', 3735) ) RETURNING id`, [r.title, r.parcelnum, r.address,  r.year, r.date_approved, filename])
 
       }
 

@@ -5,7 +5,6 @@ class mglMessageButton {
     options.title = (!options.title) ? "Welcome" : options.title
     options.message = (!options.message) ? "This is a description." : options.message
     this.onAdd = function (map) {
-      console.log(this);
       //CREATE WELCOME MESSAGE MODAL
 
       function mglMessageButtonModal () {

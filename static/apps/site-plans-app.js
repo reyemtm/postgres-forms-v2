@@ -6,7 +6,7 @@ var sitePlans, featureStateId;
 
 import {
   layerControlGrouped
-} from "../assets/mapbox-layer-control-master/layerControlGrouped.js"
+} from "../vendor/mapbox-layer-control-master/layerControlGrouped.js"
 
 import {
   mglMessageButton
@@ -26,6 +26,10 @@ import {
   mglLoading
 } from '../assets/mglLoading.js'
 
+import {
+  mglAddIcons
+} from '../assets/mglAddIcons.js'
+
 //////////////////////////////////
 //SETUP MODAL FORM FOR EDITING DATA USING A VERY SIMPLE JSON SCHEMA
 //////////////////////////////////
@@ -40,9 +44,9 @@ var sitePlansSchema = {
     name: "Last Edited",
     readonly: true
   },
-  "parcelnum": {
+  "parcels": {
     type: "text",
-    name: "Parcel Number",
+    name: "Associated Parcels",
     readonly: true
   },
   "address": {
@@ -50,12 +54,6 @@ var sitePlansSchema = {
     name: "Site Address",
     readonly: false
   },
-  // "zoning_code": {
-  //   type: "select",
-  //   options:  (Object.keys(zoningPaintTable)).sort(),
-  //   name: "Zoning Code",
-  //   required: true
-  // },
   "title": {
     type: "text",
     name: "Title",
@@ -92,6 +90,11 @@ var sitePlansSchema = {
     required: true,
     name: "Latitude",
     readonly: true
+  },
+  "bounding_box": {
+    type: "text",
+    name: "Bounding Box",
+    readonly: true
   }
 
 }
@@ -117,13 +120,14 @@ if (window.location.hash === "#inputFormModal") {
 
 //////////////////////////////////
 //PROMISE ALL TO GET ALL THE DATA THAT WE NEED, VECTOR TILES ARE ALREADY BEING SERVED ELSEWHERE
-//APPS IS PUBLIC, ANYTHING UNDER APPS/COZ IS SECURED BY WINDOWS READ/WRITE SECTURIY ON THE SERVER FOR THE FOLDER COZ
+//APPS IS PUBLIC, ANYTHING UNDER APPS/COZ IS SECURED BY WINDOWS DOMAIN ON THE SERVER FOR THE FOLDER COZ
 //////////////////////////////////
 Promise.all([
   fetch("../get-table?table=eng_site_plans&format=geojson", {
     cache: "reload"
   }),
-  fetch("https://gis.coz.org/map-layers-config.json")
+  fetch("https://gis.coz.org/map-layers-config.json"),
+  fetch("../assets/mapillary-icons/mapillary-icons.json")
 ])
 .then(res => {
   Promise.all(res.map(r => r.json()))
@@ -145,7 +149,6 @@ function initMap(data) {
   var mask = {
     "id": "admin-mask",
     "type": "fill",
-    "children": true,
     "directory": "Administrative Layers",
     "group": "Administrative Boundaries",
     "name": "City Mask",
@@ -195,7 +198,30 @@ function initMap(data) {
 
   var sitePlansLayer = {
     "id": "sitePlans",
-    "type": "circle",
+    "type": "fill",
+    "directory": "Administrative Layers",
+    "name": "Site Plans",
+    "children": true,
+    "source": "sitePlans",
+    "sourceType": {
+      "type": "geojson",
+      "data": sitePlans
+    },
+    "paint": {
+      "fill-color": "blue",
+      "fill-outline-color": "white",
+      "fill-opacity": 0.3
+    },
+    "layout": {
+      "visibility": "none"
+    }
+  }
+
+  var sitePlansOutline = {
+    "id": "sitePlansOutline",
+    "type": "line",
+    "parent": "sitePlans",
+    "hidden": true,
     "directory": "Administrative Layers",
     "name": "Site Plans",
     "source": "sitePlans",
@@ -204,9 +230,8 @@ function initMap(data) {
       "data": sitePlans
     },
     "paint": {
-      "circle-color": "red",
-      "circle-stroke-color": "white",
-      "circle-radius": 12
+      "line-color": "blue",
+      "line-width": 5
     },
     "layout": {
       "visibility": "none"
@@ -216,9 +241,135 @@ function initMap(data) {
   data[1].push(mask)
   data[1].push(maskOutline)
   data[1].push(sitePlansLayer)
+  data[1].push(sitePlansOutline)
+
 
   var layers = data[1].filter(d => {
-    return d["directory"] === "Administrative Layers"
+    return  d["directory"] === "Impervious Surface" || d["directory"] === "Administrative Layers" || d["directory"] === "Imagery" || d["directory"] === "City Sewer System"
+  })
+
+  layers.push({
+    id: "mapillary",
+    type: "symbol",
+    group: "Mapillary",
+    directory: "Mapillary",
+    name: "Mapillary Point Detections",
+    "children": true,
+    source: "mapillary",
+    sourceType: {
+      type: "vector",
+      tiles: [ "https://a.mapillary.com/v3/map_features?tile={z}/{x}/{y}&client_id=V3B6aHlRZVdMUG5aX1R3dnhjZFVfdzo4YmEwZjY1Mjg2ZTNhYzQ2&layers=points"],
+      attribution: "<a href='https://www.mapillary.com'>Mapillary</a>, CC BY",
+      minzoom: 12,
+      maxzoom: 17
+    },
+    "source-layer": "mapillary-points",
+    "filter": ["all",
+      ["!=", ["get", "value"], "construction--flat--driveway"],
+      ["!=", ["get", "value"], "object--sign--advertisement"],
+      ["!=", ["get", "value"], "object--sign--store"],
+      ["!=", ["get", "value"], "object--support--utility-pole"]
+
+    ],
+    layout: {
+      "icon-image": "{value}",
+      "icon-allow-overlap": true,
+      visibility: "none"
+    }
+  })
+
+  layers.push({
+      "id": "mapillaryLabels",
+      "directory": "Mapillary",
+      "group": "Mapillary",
+      "type": "symbol",
+      "parent": "mapillary",
+      "hidden": true,
+      "name": "Mapillary Labels",
+      "source": "mapillary",
+      "source-layer": "mapillary-points",
+      "paint": {
+        "text-color": "black",
+        "text-halo-color": "white",
+        "text-halo-width": 2,
+        "text-halo-blur": 0
+      },
+      "layout": {
+        "visibility": "none",
+        "text-font": ["DIN Offc Pro Bold"],
+        "text-field": "{value}",
+        "text-anchor": "bottom-left",
+        "text-size": 14,
+        "text-offset": [0.5, -0.2]
+      },
+      "filter": ["all",
+        ["!=", ["get", "value"], "construction--flat--driveway"],
+        ["!=", ["get", "value"], "object--sign--advertisement"],
+        ["!=", ["get", "value"], "object--sign--store"],
+        ["!=", ["get", "value"], "object--support--utility-pole"]
+
+      ],
+    })
+  
+  layers.push({
+    "id": "mapillary-signs",
+    "name": "Mapillary Signs",
+    "group": "Mapillary",
+    "directory": "Mapillary",
+    "children": true,
+    "type": "circle",
+    source: "mapillary-signs",
+    sourceType: {
+      type: "vector",
+      tiles: ["https://a.mapillary.com/v3/map_features?tile={z}/{x}/{y}&client_id=V3B6aHlRZVdMUG5aX1R3dnhjZFVfdzo4YmEwZjY1Mjg2ZTNhYzQ2&layers=trafficsigns"],
+      attribution: "<a href='https://www.mapillary.com'>Mapillary</a>, CC BY",
+      minzoom: 12,
+      maxzoom: 17
+    },
+    "source-layer": "mapillary-trafficsigns",
+    "paint": {
+      "circle-color": "red",
+      "circle-radius": 6,
+      "circle-stroke-color": "white",
+      "circle-stroke-width": 2
+    },
+    "layout": {
+      "visibility": "none"
+    }
+  })
+
+  layers.push({
+    "id": "mapillary-signs-labels",
+    "name": "Mapillary Sign Detections",
+    "group": "Mapillary",
+    "directory": "Mapillary",
+    "hidden": true,
+    "parent": "mapillary-signs",
+    "type": "symbol",
+    "minzoom": 16,
+    source: "mapillary-signs",
+    sourceType: {
+      type: "vector",
+      tiles: ["https://a.mapillary.com/v3/map_features?tile={z}/{x}/{y}&client_id=V3B6aHlRZVdMUG5aX1R3dnhjZFVfdzo4YmEwZjY1Mjg2ZTNhYzQ2&layers=trafficsigns"],
+      attribution: "<a href='https://www.mapillary.com'>Mapillary</a>, CC BY",
+      minzoom: 12,
+      maxzoom: 17
+    },
+    "source-layer": "mapillary-trafficsigns",
+    "paint": {
+      "text-color": "black",
+      "text-halo-color": "white",
+      "text-halo-width": 2,
+      "text-halo-blur": 0
+    },
+    "layout": {
+      "visibility": "none",
+      "text-font": ["DIN Offc Pro Bold"],
+      "text-field": "{value}",
+      "text-anchor": "bottom-left",
+      "text-size": 14,
+      "text-offset": [0.5, -0.2]
+    },
   })
 
   mapboxgl.accessToken = 'pk.eyJ1IjoiY296Z2lzIiwiYSI6ImNqZ21lN2R5ZDFlYm8ycXQ0a3R2cmI2NWgifQ.z4GxUZe5JXAdoRR4E3mvpg' //TODO turn this whole thing into a route and move this to the env file
@@ -235,10 +386,16 @@ function initMap(data) {
   //////////////////////////////////
   // USE THE LOADING FUNCTION TO ADD A LOADING ICON WHENEVER THERE IS A RENDER EVENT ON THE MAP, AND REMOVE WHEN THE MAP IS LOADED
   //////////////////////////////////
-  mglLoading(map, "loading", "loading")
+  // mglLoading(map, "loading", "loading")
   
   map.on('load', function () {
+    mglAddIcons(map, data[2], function() {
+      next()
+    })
+  });
 
+  function next() {
+    document.querySelector("#loading").classList.remove("loading")
     //////////////////////////////////
     //ADD SOURCES, LAYERS AND LAYER CONTROL USING CUSTOM GROUPEDLAYERCONTROL
     //////////////////////////////////
@@ -287,6 +444,7 @@ function initMap(data) {
     //ADD MAP CLICK LISTENER
     //////////////////////////////////
     map.on("click", function (e) {
+      console.log(map.queryRenderedFeatures(e.point))
       clickListener(map, e, sitePlans)
     })
     //
@@ -303,8 +461,8 @@ function initMap(data) {
     //ADD SUBMIT LISTENER TO FORM, PASSING IN THE map OBJECT
     //////////////////////////////////
     inputFormModalSubmitListener(map, sitePlans)
+  }
 
-  });
 }
 
 /**
@@ -396,7 +554,7 @@ function clickListener(map, e, table) {
             ${(!props[key]) ? "&nbsp" : (props[key] === "") ? "&nbsp" : (key === "parcelnum") ? `<a href="https://www.muskingumcountyauditor.org/Data.aspx?ParcelID=${props[key]}">${props[key]}</a>` : props[key] }
           </div>`
     }).join(" ")}
-    <br><a href="#inputFormModal"><button class="btn btn-sm btn-outline btn-red" style="width:100%" onclick="document.querySelector('.mapboxgl-popup-close-button').click()"><icon class="icon icon-edit"></icon> EDIT/ADD ZONING</button></a>
+    <br><a href="#inputFormModal"><button class="btn btn-sm btn-outline btn-red" style="width:100%" onclick="document.querySelector('.mapboxgl-popup-close-button').click()"><icon class="icon icon-edit"></icon> EDIT/ADD SITE PLAN</button></a>
     `
   }
 
@@ -521,3 +679,61 @@ function paramsToObject(entries) {
   }
   return result;
 }
+
+/* -----------------
+>>>>NEW WORKFLOW<<<<
+1. CLICK POLYGON DRAW BUTTON - CHANGED IN JS TO SAY ADD NEW SITE PLAN
+2. DRAW BOUNDING BOX
+3. ON CREATE OPENS EDITING MODAL
+4. CHANGE PARCELNUM TO PARCELS, SEPARATED BY COMMAS
+5. AUTO ADD ADDRESS BY SELECTING ADDRESS OF CENTROID OF BOUNDING BOX AND PARCEL LAYER
+6. AUTO ADD AT LEAST ONE PARCEL BY SAME METHOD
+7. SAVE, ALSO SAVING CENTROID OF BOUNDING BOX
+8. ON SAVE DELETE ALL ITEMS DRAW
+9. ON CLICK OF SITE PLANS BOUNDS OPEN MODAL WINDOW TO EDIT - DISABLING TO FILE BUTTON AND REPLACING IT WITH FILE NAME
+------------------- */
+
+//TODO ADD OPTION TO DELETE FILE
+//TODO ADD OPTION TO CHANGE FILE
+//TODO ADD A SIDEBAR WITH LIST OF SITE PLANS
+//TODO ADD A SEARCH FOR SITE PLANS
+//TODO ADD A FILTER FOR SITE PLANS
+
+//EXAMPLE OF DRAWING A BOUNDING BOX USING CUSTOM MODE AND MAPBOX GL JS DRAW
+
+/*
+import { DrawRectangle } from "/mapbox-gl-draw-rectangle-mode.js"
+
+var modes = MapboxDraw.modes;
+
+modes.draw_rectangle = DrawRectangle;
+
+var draw = new MapboxDraw({
+  modes: modes,
+  uerProperties: true
+});
+map.addControl(draw);
+
+//REMOVE ALL OTHER DRAW MODES EXCEPT POLYGON, THEN REPLACE WITH RECTANGLE WHEN ACTIVATED
+var drawTools = document.querySelectorAll(".mapbox-gl-draw_ctrl-draw-btn");
+Object.keys(drawTools).map(t => {
+  if (drawTools[t].classList.contains("mapbox-gl-draw_polygon") || drawTools[t].classList.contains("mapbox-gl-draw_trash")) {
+
+  } else {
+    drawTools[t].style.display = "none"
+  }
+});
+
+map.on('draw.modechange', function () {
+  switch (draw.getMode()) {
+    case "draw_line_string": draw.changeMode('draw_rectangle');
+    case "draw_point": draw.changeMode('draw_rectangle');
+    case "draw_polygon": draw.changeMode('draw_rectangle');
+    default: null
+  }
+})
+
+map.on('draw.create', function (feature) {
+  console.log(feature);
+});
+    */

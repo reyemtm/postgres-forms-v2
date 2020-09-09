@@ -6,7 +6,7 @@ var zoningTable, zoningFeatureStateId, zoningPaintTable, zoningSchema;
 
 import {
   layerControlGrouped
-} from "../assets/mapbox-layer-control-master/layerControlGrouped.js"
+} from "../vendor/mapbox-layer-control-master/layerControlGrouped.js"
 
 import {
   mglMessageButton
@@ -69,7 +69,7 @@ zoningSchema = {
     name: "Parcel Number",
     readonly: true
   },
-  "address": {
+  "parcel_address": {
     type: "text",
     name: "Parcel Address",
     readonly: true
@@ -387,7 +387,7 @@ function clickListener(map, e, table) {
         props[0] = {
           id: 0,
           parcelnum: features[0].properties.parcelnum,
-          address: features[0].properties.address,
+          parcel_address: features[0].properties.location_address,
           edit_date: new Date(),
           zoning_code: "",
           zoning_notes: "",

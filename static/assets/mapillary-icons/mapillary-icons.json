@@ -1,0 +1,174 @@
+[
+  {
+    "name": "construction--barrier--temporary",
+    "url": "../assets/mapillary-icons/construction--barrier--temporary.png"
+  },
+  {
+    "name": "construction--flat--crosswalk-plain",
+    "url": "../assets/mapillary-icons/construction--flat--crosswalk-plain.png"
+  },
+  {
+    "name": "construction--flat--driveway",
+    "url": "../assets/mapillary-icons/construction--flat--driveway.png"
+  },
+  {
+    "name": "construction--flat--flat-driveway",
+    "url": "../assets/mapillary-icons/construction--flat--flat-driveway.png"
+  },
+  {
+    "name": "marking--discrete--arrow--left",
+    "url": "../assets/mapillary-icons/marking--discrete--arrow--left.png"
+  },
+  {
+    "name": "marking--discrete--arrow--right",
+    "url": "../assets/mapillary-icons/marking--discrete--arrow--right.png"
+  },
+  {
+    "name": "marking--discrete--arrow--split-left-or-straight",
+    "url": "../assets/mapillary-icons/marking--discrete--arrow--split-left-or-straight.png"
+  },
+  {
+    "name": "marking--discrete--arrow--split-right-or-straight",
+    "url": "../assets/mapillary-icons/marking--discrete--arrow--split-right-or-straight.png"
+  },
+  {
+    "name": "marking--discrete--arrow--straight",
+    "url": "../assets/mapillary-icons/marking--discrete--arrow--straight.png"
+  },
+  {
+    "name": "marking--discrete--crosswalk-zebra",
+    "url": "../assets/mapillary-icons/marking--discrete--crosswalk-zebra.png"
+  },
+  {
+    "name": "marking--discrete--give-way-row",
+    "url": "../assets/mapillary-icons/marking--discrete--give-way-row.png"
+  },
+  {
+    "name": "marking--discrete--give-way-single",
+    "url": "../assets/mapillary-icons/marking--discrete--give-way-single.png"
+  },
+  {
+    "name": "marking--discrete--other-marking",
+    "url": "../assets/mapillary-icons/marking--discrete--other-marking.png"
+  },
+  {
+    "name": "marking--discrete--stop-line",
+    "url": "../assets/mapillary-icons/marking--discrete--stop-line.png"
+  },
+  {
+    "name": "marking--discrete--symbol--bicycle",
+    "url": "../assets/mapillary-icons/marking--discrete--symbol--bicycle.png"
+  },
+  {
+    "name": "marking--discrete--text",
+    "url": "../assets/mapillary-icons/marking--discrete--text.png"
+  },
+  {
+    "name": "object--banner",
+    "url": "../assets/mapillary-icons/object--banner.png"
+  },
+  {
+    "name": "object--bench",
+    "url": "../assets/mapillary-icons/object--bench.png"
+  },
+  {
+    "name": "object--bike-rack",
+    "url": "../assets/mapillary-icons/object--bike-rack.png"
+  },
+  {
+    "name": "object--catch-basin",
+    "url": "../assets/mapillary-icons/object--catch-basin.png"
+  },
+  {
+    "name": "object--cctv-camera",
+    "url": "../assets/mapillary-icons/object--cctv-camera.png"
+  },
+  {
+    "name": "object--fire-hydrant",
+    "url": "../assets/mapillary-icons/object--fire-hydrant.png"
+  },
+  {
+    "name": "object--junction-box",
+    "url": "../assets/mapillary-icons/object--junction-box.png"
+  },
+  {
+    "name": "object--mailbox",
+    "url": "../assets/mapillary-icons/object--mailbox.png"
+  },
+  {
+    "name": "object--manhole",
+    "url": "../assets/mapillary-icons/object--manhole.png"
+  },
+  {
+    "name": "object--parking-meter",
+    "url": "../assets/mapillary-icons/object--parking-meter.png"
+  },
+  {
+    "name": "object--phone-booth",
+    "url": "../assets/mapillary-icons/object--phone-booth.png"
+  },
+  {
+    "name": "object--sign--advertisement",
+    "url": "../assets/mapillary-icons/object--sign--advertisement.png"
+  },
+  {
+    "name": "object--sign--information",
+    "url": "../assets/mapillary-icons/object--sign--information.png"
+  },
+  {
+    "name": "object--sign--store",
+    "url": "../assets/mapillary-icons/object--sign--store.png"
+  },
+  {
+    "name": "object--street-light",
+    "url": "../assets/mapillary-icons/object--street-light.png"
+  },
+  {
+    "name": "object--support--pole",
+    "url": "../assets/mapillary-icons/object--support--pole.png"
+  },
+  {
+    "name": "object--support--traffic-sign-frame",
+    "url": "../assets/mapillary-icons/object--support--traffic-sign-frame.png"
+  },
+  {
+    "name": "object--support--utility-pole",
+    "url": "../assets/mapillary-icons/object--support--utility-pole.png"
+  },
+  {
+    "name": "object--traffic-cone",
+    "url": "../assets/mapillary-icons/object--traffic-cone.png"
+  },
+  {
+    "name": "object--traffic-light--cyclists",
+    "url": "../assets/mapillary-icons/object--traffic-light--cyclists.png"
+  },
+  {
+    "name": "object--traffic-light--general-horizontal",
+    "url": "../assets/mapillary-icons/object--traffic-light--general-horizontal.png"
+  },
+  {
+    "name": "object--traffic-light--general-single",
+    "url": "../assets/mapillary-icons/object--traffic-light--general-single.png"
+  },
+  {
+    "name": "object--traffic-light--general-upright",
+    "url": "../assets/mapillary-icons/object--traffic-light--general-upright.png"
+  },
+  {
+    "name": "object--traffic-light--other",
+    "url": "../assets/mapillary-icons/object--traffic-light--other.png"
+  },
+  {
+    "name": "object--traffic-light--pedestrians",
+    "url": "../assets/mapillary-icons/object--traffic-light--pedestrians.png"
+  },
+  {
+    "name": "object--trash-can",
+    "url": "../assets/mapillary-icons/object--trash-can.png"
+  },
+  {
+    "name": "object--water-valve",
+    "url": "../assets/mapillary-icons/object--water-valve.png"
+  }
+]
