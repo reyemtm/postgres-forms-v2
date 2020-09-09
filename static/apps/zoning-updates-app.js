@@ -69,7 +69,7 @@ zoningSchema = {
     name: "Parcel Number",
     readonly: true
   },
-  "address": {
+  "parcel_address": {
     type: "text",
     name: "Parcel Address",
     readonly: true
@@ -383,11 +383,12 @@ function clickListener(map, e, table) {
       console.log(props)
 
       //GET PARCEL NUMBER AND PARCEL ADDRESS FROM PARCEL TO FILL IN IF NOTHING IS FOUND IN THE ZONING TABLE
+
       if (props.length === 0) {
         props[0] = {
           id: 0,
           parcelnum: features[0].properties.parcelnum,
-          address: features[0].properties.address,
+          address: features[0].properties.location_address,
           edit_date: new Date(),
           zoning_code: "",
           zoning_notes: "",
@@ -397,6 +398,7 @@ function clickListener(map, e, table) {
           owner: features[0].properties.owner_contact_name,
           split: features[0].properties.split,
         }
+
         if (props[0].parcelnum === "WW" || props[0].parcelnum === "RR" || !props[0].parcelnum || props[0].parcelnum === undefined || props[0].parcelnum == "9") return
 
         popup
