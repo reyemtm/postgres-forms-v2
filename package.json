@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "pm2 server.js",
-    "dev": "pm2 start server.js --watch"
+    "dev": "pm2 start server.js --watch",
+    "icons": "node genMapillaryIconsObject.js"
   },
   "keywords": [],
   "author": "Malcolm Meyer",

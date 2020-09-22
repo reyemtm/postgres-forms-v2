@@ -183,10 +183,10 @@ function initMap(data) {
     "source": "adminSource",
     "sourceType": {
       "type": "vector",
-      "tiles": ["https://311.coz.org/data/vt/adm_admin_boundaries/{z}/{x}/{y}.mvt"],
-      "maxzoom": 17
+      "tiles": ["https://311.coz.org/api/v1/vector=tiles/public.adm_admin_boundaries/{z}/{x}/{y}.pbf"],
+      "maxzoom": 20
     },
-    "source-layer": "adm_admin_boundaries",
+    "source-layer": "public.adm_admin_boundaries",
     "paint": {
       "fill-color": "whitesmoke",
       "fill-opacity": 0.99
@@ -209,10 +209,10 @@ function initMap(data) {
     "source": "adminSource",
     "sourceType": {
       "type": "vector",
-      "tiles": ["https://311.coz.org/data/vt/adm_admin_boundaries/{z}/{x}/{y}.mvt"],
-      "maxzoom": 17
+      "tiles": ["https://311.coz.org/api/v1/vector=tiles/public.adm_admin_boundaries/{z}/{x}/{y}.pbf"],
+      "maxzoom": 20
     },
-    "source-layer": "adm_admin_boundaries",
+    "source-layer": "public.adm_admin_boundaries",
     "paint": {
       "line-color": "black",
       "line-width": 4
@@ -368,7 +368,7 @@ function clickListener(map, e, table) {
   if (parcel && parcel.length) {
 
     var features = map.querySourceFeatures('parcelSource', {
-      sourceLayer: "adm_mus_parcels",
+      sourceLayer: "public.adm_mus_parcels",
       filter: ["==", "parcelnum", parcel[0].properties.parcelnum]
     });
   
