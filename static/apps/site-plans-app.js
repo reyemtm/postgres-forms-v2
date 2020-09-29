@@ -481,7 +481,7 @@ function clickListener(map, e, table) {
   if (parcel && parcel.length) {
 
     var features = map.querySourceFeatures('parcelSource', {
-      sourceLayer: "adm_mus_parcels",
+      sourceLayer: "public.adm_mus_parcels",
       filter: ["==", "parcelnum", parcel[0].properties.parcelnum]
     });
   

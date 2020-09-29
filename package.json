@@ -20,6 +20,7 @@
     "fastify-compress": "^2.0.1",
     "fastify-file-upload": "^2.1.0",
     "fastify-formbody": "^3.2.0",
+    "fastify-knex": "^0.1.1",
     "fastify-postgres": "^2.0.0",
     "fastify-static": "^2.7.0",
     "pg": "^7.18.2",

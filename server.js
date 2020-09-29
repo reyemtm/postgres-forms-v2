@@ -26,6 +26,13 @@ const fastify = require("fastify")({
 .register(require('fastify-postgres'), {
   connectionString: DB
 })
+
+.register(require('fastify-knex'), {
+  client: 'pg',
+  debug: true,
+  connection: DB
+})
+
 //COMPRESS NEEDS LOADED BEFORE AUTOLOAD TO ENABLE FOR THE ROUTES
 .register(require('fastify-compress'), 
   { 
@@ -33,6 +40,7 @@ const fastify = require("fastify")({
     encodings: ['deflate', 'gzip']
   }
 )
+
 .register(require("fastify-autoload"), {
   dir: path.join(__dirname, 'routes')
   // options: {

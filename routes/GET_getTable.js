@@ -16,7 +16,6 @@ module.exports = function (fastify, opts, next) {
     // console.log(req.ips)
     // console.log(req.hostname)
 
-
     var query = req.query;
     var geojson = (!req.query.format) ? false : (req.query.format === "geojson") ? true : false;
     var tables = [
@@ -24,7 +23,9 @@ module.exports = function (fastify, opts, next) {
       "utl_sanitary_lines_cleaning",
       "utl_sanitary_lines",
       "dev_zoning_table",
-      "adm_mus_parcels"
+      "adm_mus_parcels",
+      "trn_mus_centerlines",
+      "utl_streets_sweeping_tracker"
     ]
     if (!query.table || tables.indexOf(query.table) < 0) {
       res.status(404)

@@ -10,12 +10,18 @@ body {
   bottom: 0;
   width: 100%;
 }
+
+.mapboxgl-canvas:focus {
+  outline: none;
+}
+
 .mapboxgl-popup {
-  max-width: 100%!important;
+  max-width: 280px!important;
 }
 .mapboxgl-popup-content {
-  font-size: 14px;
+  font-size: 16px;
   line-height: 21px;
+  padding: 16px;
 }
 .mapboxgl-popup-content div {
   width: 100%;
@@ -49,6 +55,43 @@ body {
   margin-right: 0;
 }
 /**/
+
+/*SIDEBAR*/
+#sidebar {
+  background: white;
+  bottom: 0;
+  left: 0;
+  flex-direction: column;
+  position: absolute;
+  top: 0;
+  width: 320px;
+  z-index: 1;
+}
+
+#sidebar header {
+  background: whitesmoke;
+  padding: 0.5rem;
+  text-align: center;
+}
+
+#sidebar header h1 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+#sidebar section {
+  flex: 1;
+  padding: 1rem;
+}
+#sidebar footer {
+  align-items:flex-end;
+  padding: 1.5rem;
+}
+
+summary {
+  cursor: pointer;
+  font-weight: 500;
+}
 
 /*NAVBAR, LOADING, MODAL AND FORM STYLE TWEAKS FROM SPECTRE CSS*/
 .loading {
