@@ -8,18 +8,20 @@ fetch("https://311.coz.org/api/v1/feature-server/collections/public.utl_streets_
     return res.json()
   })
   .then(geojson => {
-    initMap(geojson);
+    var map = initMap();
+    map.on("load", function() {
+      mapOnLoad(map, geojson)
+    })
   })
   .catch(err => {
     alert("An error has occurred receiving the map data. Please refersh your browser. If the error persists contact the Engineering Division.", err);
     console.log(err)
   })
 
-function initMap(geojson) {
-
+function initMap() {
   mapboxgl.accessToken = 'pk.eyJ1IjoiY296Z2lzIiwiYSI6ImNqZ21lN2R5ZDFlYm8ycXQ0a3R2cmI2NWgifQ.z4GxUZe5JXAdoRR4E3mvpg'
 
-  var map = new mapboxgl.Map({
+  return new mapboxgl.Map({
     container: 'map', // container id
     style: 'mapbox://styles/cozgis/cjvpkkmf211dt1dplro55m535', // stylesheet location
     center: [-82.014, 39.942], // starting position [lng, lat]
@@ -29,8 +31,9 @@ function initMap(geojson) {
     dragRotate: false,
     touchPitch: false
   });
+}
 
-  map.on('load', function () {
+function mapOnLoad(map, geojson) {
 
     addForm("sidebar")
     addLayers(map, geojson);
@@ -59,9 +62,6 @@ function initMap(geojson) {
     /*FINALLY REMOVE THE LOADER*/
     document.querySelector(".loading").classList.remove("loading")
     /**/
-
-  });
-  /*END MAP ON LOAD EVENT*/
 }
 
 function clickListener(e) {
@@ -78,7 +78,7 @@ function clickListener(e) {
   });
   
   if (features && features.length) {
-    // console.log(features[0])
+    console.log(features[0])
 
     highlight(map, features[0])
 
@@ -117,7 +117,6 @@ function highlight(map, data) {
   }
 }
 
-
 function formSubmit(map) {
   var form = document.querySelector("form");
   if (!form) {
@@ -143,14 +142,17 @@ function formSubmit(map) {
           }
         })
         .then(json => {
-          console.log(json)
           window.location.hash = "#";
           formReset(form);
           var current = map.getSource("lines")._data;
           current.features.map(f => {
             if (json.ids.indexOf(f.properties.id.toString()) > -1) {
-              console.log(json.date, f.properties.last_swept)
-              f.properties.last_swept = new Date(json.date).getTime()
+              console.log(json.date)
+              //BUG THIS IS A WEIRD JAVASCRIPT HACK TO GET THE DATE TO READ CORRECTLY 
+              //IT READS CORRECTLY COMING FROM THE DATABASE ORIGINALLY, JUST NOT HERE UNLESS YOU USE THIS HACK
+              //SEE https://stackoverflow.com/questions/7556591/is-the-javascript-date-object-always-one-day-off
+              f.properties.last_swept = new Date(json.date.replace(/-/g, '\/')).getTime();
+              // console.log(f.properties.last_swept)
             }
           });
           map.getSource("lines").setData(current)
