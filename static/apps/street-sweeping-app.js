@@ -8,7 +8,7 @@ fetch("https://311.coz.org/api/v1/feature-server/collections/public.utl_streets_
     return res.json()
   })
   .then(geojson => {
-    var map = initMap();
+    var map = mapInit();
     map.on("load", function() {
       mapOnLoad(map, geojson)
     })
@@ -18,7 +18,7 @@ fetch("https://311.coz.org/api/v1/feature-server/collections/public.utl_streets_
     console.log(err)
   })
 
-function initMap() {
+function mapInit() {
   mapboxgl.accessToken = 'pk.eyJ1IjoiY296Z2lzIiwiYSI6ImNqZ21lN2R5ZDFlYm8ycXQ0a3R2cmI2NWgifQ.z4GxUZe5JXAdoRR4E3mvpg'
 
   return new mapboxgl.Map({
@@ -35,10 +35,10 @@ function initMap() {
 
 function mapOnLoad(map, geojson) {
 
-    addForm("sidebar")
-    addLayers(map, geojson);
-    addControls(map);
-    var draw = addDrawControl(map);
+    formAdd("sidebar")
+    mapAddLayers(map, geojson);
+    mapAddControls(map);
+    var draw = mapAddDrawControl(map);
 
     addStreetButtonEventListeners(map, draw)
 
@@ -52,7 +52,7 @@ function mapOnLoad(map, geojson) {
       map.getSource("selected").setData(turf.featureCollection([]))
     })
 
-    map.on("click", clickListener)
+    map.on("click", mapClickListener)
     /**/
 
     /*ADD SUBMIT LISTENER TO FORM, PASSING IN THE map OBJECT*/
@@ -64,9 +64,10 @@ function mapOnLoad(map, geojson) {
     /**/
 }
 
-function clickListener(e) {
+function mapClickListener(e) {
+  console.log(this.queryRenderedFeatures(e.point))
   let map = this;
-  highlight(map);
+  mapHighlight(map);
 
   var bbox = [
     [e.point.x - 10, e.point.y - 10],
@@ -80,7 +81,7 @@ function clickListener(e) {
   if (features && features.length) {
     console.log(features[0])
 
-    highlight(map, features[0])
+    mapHighlight(map, features[0])
 
     var flat = turf.flatten(features[0])
     var center = turf.center(flat);
@@ -88,15 +89,15 @@ function clickListener(e) {
     var dateFormat = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
     var popup = new mapboxgl.Popup()
       .setLngLat(center.geometry.coordinates)
-      .setHTML(`<h4>${p.lsn}</h4><p>This section of ${p.lsn} from ${p.int_from} to ${p.int_to} ${(!p.last_swept) ? `has not been swept` : `was last swept on ${new Date(p.last_swept).toLocaleString('en-US', dateFormat)}`}.</p>`)
+      .setHTML(`<h4>${p.lsn}</h4><p>This section of ${p.lsn} ${(p.st_type != 'ALY') ? `from ${p.int_from} to ${p.int_to}` : "" } ${(!p.last_swept) ? `has not been swept` : `was last swept on ${new Date(p.last_swept).toLocaleString('en-US', dateFormat)}`}.</p>`)
       .on("close", function() {
-        if (!document.querySelector(".mapboxgl-popup")) highlight(map)
+        if (!document.querySelector(".mapboxgl-popup")) mapHighlight(map)
       })
       .addTo(map)
   }
 }
 
-function highlight(map, data) {
+function mapHighlight(map, data) {
   if (!data) data = turf.featureCollection([])
   if (!map.getSource("highlight")) {
     map.addSource("highlight", {
@@ -115,6 +116,142 @@ function highlight(map, data) {
   }else{
     map.getSource("highlight").setData(data)
   }
+}
+
+function mapAddLayers(map, geojson) {
+
+  fetch("../get-table?table=utl_streets_sweeping_tracker")
+    .then(res => res.json())
+    .then(table => {
+
+      var sweptStreets = {};
+
+      table.map(row => {
+        if (!sweptStreets[row.street_id]) {
+          sweptStreets[row.street_id] = [row.date]
+        }else{
+          sweptStreets[row.street_id].push(row.date);
+          sweptStreets[row.street_id].sort()
+        }
+      });
+    
+      geojson.features.map(f => {
+        if (sweptStreets[f.properties.id]) {
+          f.properties.last_swept = new Date(sweptStreets[f.properties.id][ [sweptStreets[f.properties.id].length - 1] ]).getTime()
+        }else{
+          f.properties.last_swept = 0;
+        }
+      })
+
+      var layers = [{
+          "id": "lines",
+          "name": "Street Sweeping Roads",
+          "directory": "Map Layers",
+          "group": "Street Sweeping Roads",
+          "hidden": false,
+          "type": "line",
+          "source": "lines",
+          "children": true,
+          "legend": "<span style='color:black'>&#9644</span> Roads<br/><span style='color:firebrick'>&#9644</span> Swept Roads",
+          "sourceType": {
+            "type": "geojson",
+            "data": geojson,
+            "promoteId": "id"
+          },
+          "paint": {
+            "line-width": ["case",
+            [">=", ["get", "last_swept"], new Date().setMonth(new Date().getMonth() - 12)], 6,
+              2
+            ],
+            "line-color": ["case", 
+              [">=", ["get", "last_swept"], new Date().setMonth(new Date().getMonth() - 4)], "deepskyblue",
+              [">=", ["get", "last_swept"], new Date().setMonth(new Date().getMonth() - 8)], "darkorange",
+              [">=", ["get", "last_swept"], new Date().setMonth(new Date().getMonth() - 12)], "red",
+
+              "black"
+            ],
+            "line-opacity": 0.8
+          },
+          "layout": {
+            "visibility": "visible"
+          }
+        },
+        {
+          "id": "selected",
+          "name": "Sanitary Lines",
+          "directory": "Map Layers",
+          "group": "Sanitary Sewer Layers",
+          "hidden": false,
+          "type": "line",
+          "source": "selected",
+          "children": true,
+          "legend": "<span style='color:green'>&#9644</span> Sanitary Main<br/><span style='color:deeppink'>&#9644</span> Cleaned Lines",
+          "sourceType": {
+            "type": "geojson",
+            "data": turf.featureCollection([]),
+            "generateId": true
+          },
+          "paint": {
+            "line-width": 6,
+            "line-color": "yellow",
+            "line-opacity": 1
+          },
+          "layout": {
+            "visibility": "visible"
+          }
+        }
+      ]
+
+      /* ADD SOURCES AND LAYERS */
+      layers.map(layer => {
+        if (layer.sourceType && (!map.getSource(layer.source))) map.addSource(layer.source, layer.sourceType)
+      })
+      layers.map(layer => {
+        map.addLayer(layer, "road-label-small")
+      });
+
+    })
+}
+
+function mapAddControls(map) {
+  var geocoder = new MapboxGeocoder({
+    accessToken: mapboxgl.accessToken,
+    mapboxgl: mapboxgl,
+    placeholder: "Address Search"
+  });
+  map.addControl(geocoder, 'top-left');
+}
+
+function mapAddDrawControl(map) {
+
+  //ADD MAPBOX DRAW TO ALLOW FOR SELECTING ROADS
+  var modes = MapboxDraw.modes;
+
+  modes.draw_rectangle = DrawRectangle;
+
+  var draw = new MapboxDraw({
+    displayControlsDefault: false,
+    modes: modes,
+    uerProperties: true,
+    controls: {
+      polygon: true
+    }
+  });
+
+  map.addControl(draw)
+
+  map.on('draw.modechange', function () {
+    switch (draw.getMode()) {
+      case "draw_polygon":
+        draw.changeMode('draw_rectangle');
+      default:
+        null
+    }
+  })
+
+  document.querySelector(".mapbox-gl-draw_ctrl-draw-btn").style.display = "none"
+
+  return draw
 }
 
 function formSubmit(map) {
@@ -173,11 +310,11 @@ function formReset(form) {
   }
 }
 
-function addForm(el) {
+function formAdd(el) {
   //SHOW SIDEBAR
   var sidebar = document.getElementById(el);
   sidebar.style.display = "flex";
-  document.getElementById("map").style.left = "320px";
+  document.getElementById("map").style.left = "340px";
   document.getElementById("map").style.right = 0
   document.getElementById("map").style.width = "unset";
 
@@ -186,7 +323,7 @@ function addForm(el) {
   <header>
     <h1>Street Sweeping Tracker</h1>
   </header>
-  <section>
+  <section style="flex:unset">
   <form class="form" action="/street-sweeping" method="post" style="border: solid thin lightgray; padding: 0.5rem;margin: 1rem 0;">
     <div class="form-group">
       <button id="add-streets" class="js-btn btn" type="button" style="width:100%">Add Streets</button>
@@ -201,7 +338,8 @@ function addForm(el) {
       <button class="btn btn-success input-group-btn btn-lg" type="submit" style="width:100%">Submit</button>
     </div>
   </form>
- 
+  </section>
+  <section>
   <details class="accordion" open>
     <summary class="accordion-header">
     <i class="icon icon-arrow-right mr-1"></i>
@@ -209,7 +347,7 @@ function addForm(el) {
     </summary>
     <div class="accordion-body">
     <p style="margin:0.8rem">
-      <i class="fas fa-square" style="color: skyblue"></i> Swept in the past 3 Months<br>
+      <i class="fas fa-square" style="color: deepskyblue"></i> Swept in the past 3 Months<br>
       <i class="fas fa-square" style="color: orange"></i> Swept in the past 6 Months<br>
       <i class="fas fa-square" style="color: red"></i> Swept in the past 12 Months
     </p>
@@ -217,7 +355,7 @@ function addForm(el) {
   </details>
   
 
-  <details class="accordion">
+  <details class="accordion" open>
     <summary class="accordion-header">
       <i class="icon icon-arrow-right mr-1"></i>
       Instructions
@@ -226,7 +364,8 @@ function addForm(el) {
       <ol>
         <li>Click Add Streets.</li>
         <li>Draw a box on the map to select the streets.</li>
-        <li>Click the map and then drag. Holding down the mouse button will move the map. If you need to add more streets, click Add Streets again. If you need to remove streets, start over using the reset button.</li>
+        <li>Click the map and then drag. Holding down the mouse button will move the map.</li>
+        <li>If you need to add more streets, click Add Streets again. If you need to remove streets, start over using the reset button.</li>
         <li>Set the Date (defaults to today's date).</li>
         <li>Click Submit.</li>
       </ol>
@@ -241,13 +380,13 @@ function addForm(el) {
     </summary>
     <div class="accordion-body">
       <ul>
+      <li>Add feature to edit/remove streets already marked as swept</li>
       <li>Date Picker to Filter Sweeping</li>
-      <li>Report Generator?</li>
+      <li>Dashboard View</li>
       </ul>
     </div>
   </details>
 </section>
-
 <footer>
 <button id="reset-streets" class="btn btn-error" style="width: 100%";>Reset</button>
 </footer>
@@ -255,139 +394,6 @@ function addForm(el) {
   `
 
   sidebar.innerHTML += sweepingForm;
-}
-
-function addLayers(map, geojson) {
-
-  fetch("../get-table?table=utl_streets_sweeping_tracker")
-    .then(res => res.json())
-    .then(table => {
-
-      var sweptStreets = {};
-
-      table.map(row => {
-        if (!sweptStreets[row.street_id]) {
-          sweptStreets[row.street_id] = [row.date]
-        }else{
-          sweptStreets[row.street_id].push(row.date);
-          sweptStreets[row.street_id].sort()
-        }
-      });
-    
-      geojson.features.map(f => {
-        if (sweptStreets[f.properties.id]) {
-          f.properties.last_swept = new Date(sweptStreets[f.properties.id][ [sweptStreets[f.properties.id].length - 1] ]).getTime()
-        }else{
-          f.properties.last_swept = 0;
-        }
-      })
-
-      var layers = [{
-          "id": "lines",
-          "name": "Street Sweeping Roads",
-          "directory": "Map Layers",
-          "group": "Street Sweeping Roads",
-          "hidden": false,
-          "type": "line",
-          "source": "lines",
-          "children": true,
-          "legend": "<span style='color:black'>&#9644</span> Roads<br/><span style='color:firebrick'>&#9644</span> Swept Roads",
-          "sourceType": {
-            "type": "geojson",
-            "data": geojson,
-            "promoteId": "id"
-          },
-          "paint": {
-            "line-width": 6,
-            "line-color": ["case", 
-              [">=", ["get", "last_swept"], new Date().setMonth(new Date().getMonth() - 4)], "#2c7bb6",
-              [">=", ["get", "last_swept"], new Date().setMonth(new Date().getMonth() - 8)], "#fdae61",
-              [">=", ["get", "last_swept"], new Date().setMonth(new Date().getMonth() - 12)], "#d7191c",
-
-              "black"
-            ],
-            "line-opacity": 0.8
-          },
-          "layout": {
-            "visibility": "visible"
-          }
-        },
-        {
-          "id": "selected",
-          "name": "Sanitary Lines",
-          "directory": "Map Layers",
-          "group": "Sanitary Sewer Layers",
-          "hidden": false,
-          "type": "line",
-          "source": "selected",
-          "children": true,
-          "legend": "<span style='color:green'>&#9644</span> Sanitary Main<br/><span style='color:deeppink'>&#9644</span> Cleaned Lines",
-          "sourceType": {
-            "type": "geojson",
-            "data": turf.featureCollection([]),
-            "generateId": true
-          },
-          "paint": {
-            "line-width": 6,
-            "line-color": "yellow",
-            "line-opacity": 1
-          },
-          "layout": {
-            "visibility": "visible"
-          }
-        }
-      ]
-
-      /* ADD SOURCES AND LAYERS */
-      layers.map(layer => {
-        if (layer.sourceType && (!map.getSource(layer.source))) map.addSource(layer.source, layer.sourceType)
-      })
-      layers.map(layer => {
-        map.addLayer(layer)
-      });
-
-    })
-}
-
-function addControls(map) {
-  var geocoder = new MapboxGeocoder({
-    accessToken: mapboxgl.accessToken,
-    mapboxgl: mapboxgl,
-    placeholder: "Address Search"
-  });
-  map.addControl(geocoder, 'top-left');
-}
-
-function addDrawControl(map) {
-
-  //ADD MAPBOX DRAW TO ALLOW FOR SELECTING ROADS
-  var modes = MapboxDraw.modes;
-
-  modes.draw_rectangle = DrawRectangle;
-
-  var draw = new MapboxDraw({
-    displayControlsDefault: false,
-    modes: modes,
-    uerProperties: true,
-    controls: {
-      polygon: true
-    }
-  });
-
-  map.addControl(draw)
-
-  map.on('draw.modechange', function () {
-    switch (draw.getMode()) {
-      case "draw_polygon":
-        draw.changeMode('draw_rectangle');
-      default:
-        null
-    }
-  })
-
-  document.querySelector(".mapbox-gl-draw_ctrl-draw-btn").style.display = "none"
-
-  return draw
 }
 
 function addToSelection(map, drawnBox, drawControl, data) {
@@ -455,7 +461,7 @@ function addStreetButtonEventListeners(map, drawControl) {
     } else {
       e.target.classList.add("btn-success")
       drawControl.changeMode("draw_rectangle")
-      map.off("click", clickListener)
+      map.off("click", mapClickListener)
     }
   })
 
@@ -463,7 +469,7 @@ function addStreetButtonEventListeners(map, drawControl) {
     if (drawControl.getMode() === "simple_select") {
       document.querySelector("#add-streets").classList.remove("btn-success")
       setTimeout(function() {
-        map.on("click", clickListener)
+        map.on("click", mapClickListener)
       }, 1000)
     }
   })
