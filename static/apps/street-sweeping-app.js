@@ -305,6 +305,9 @@ function formSubmit(map) {
         .then(json => {
           window.location.hash = "#";
           formReset(form);
+
+          // mapStyleNewlySweptStreet(map, json.ids)
+
           var current = map.getSource("lines")._data;
           current.features.map(f => {
             if (json.ids.indexOf(f.properties.id.toString()) > -1) {
@@ -312,12 +315,19 @@ function formSubmit(map) {
               //BUG THIS IS A WEIRD JAVASCRIPT HACK TO GET THE DATE TO READ CORRECTLY 
               //IT READS CORRECTLY COMING FROM THE DATABASE ORIGINALLY, JUST NOT HERE UNLESS YOU USE THIS HACK
               //SEE https://stackoverflow.com/questions/7556591/is-the-javascript-date-object-always-one-day-off
-              f.properties.last_swept = new Date(json.date.replace(/-/g, '\/')).getTime();
+
+              if (f.properties.last_swept < new Date(json.date.replace(/-/g, '\/')).getTime()) {
+                f.properties.last_swept = new Date(json.date.replace(/-/g, '\/')).getTime();
+              }
               // console.log(f.properties.last_swept)
             }
           });
           map.getSource("lines").setData(current)
           map.getSource("selected").setData(turf.featureCollection([]))
+        })
+        .catch(err => {
+          alert("An error has occurred.")
+          console.log(err)
         })
     })
   }
@@ -404,6 +414,7 @@ function formAdd(el) {
     </summary>
     <div class="accordion-body">
       <ul>
+      <li>Table showing history of sweeping for street section</li>
       <li>Add feature to edit/remove streets already marked as swept</li>
       <li>Date Picker to Filter Sweeping</li>
       <li>Dashboard View</li>
