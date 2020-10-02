@@ -2,11 +2,13 @@ import {
   DrawRectangle
 } from "../assets/mapbox-gl-draw-rectangle-mode.js"
 
+//USE QUERY PARAM FOR TESTING VARIOUS FEATURES
+var params = new URLSearchParams(window.location.search);
+var testing = (params.get("testing")) ? true : false;
+
 //GET CENTERLINE DATA USING FEATURE COLLECTION GO SERVER
 fetch("https://311.coz.org/api/v1/feature-server/collections/public.utl_streets_sweeping_centerlines/items.json")
-  .then(res => {
-    return res.json()
-  })
+  .then(res => res.json())
   .then(geojson => {
     var map = mapInit();
     map.on("load", function() {
@@ -35,16 +37,21 @@ function mapInit() {
 
 function mapOnLoad(map, geojson) {
 
-    formAdd("sidebar")
+    /*MAP LAYERS AND CONTROLS*/
     mapAddLayers(map, geojson);
     mapAddControls(map);
     var draw = mapAddDrawControl(map);
 
-    addStreetButtonEventListeners(map, draw)
+    /*FORM AND FORM BUTTON EVENT LISTENERS*/
+    formAdd("sidebar")
+    formSubmit(map)
+    addStreetButtonEventListeners(map, draw) //RELIES ON DRAW CONTROL AND MAP LAYERS
+    /**/
 
+    /*MAP CLICK AND DRAW LISTENERS*/
     map.on("draw.create", function (e) {
       var ids = addToSelection(map, e.features[0], draw, geojson);
-      document.getElementById("ids").value = ids.join(",")
+      if (ids) document.getElementById("ids").value = ids.join(",") //RELIES ON THE ELEMENT WITH ID OF "ids" IN THE FORM WHICH IS ADDED IN formAdd()
     });
 
     map.on("contextmenu", function() {
@@ -55,12 +62,8 @@ function mapOnLoad(map, geojson) {
     map.on("click", mapClickListener)
     /**/
 
-    /*ADD SUBMIT LISTENER TO FORM, PASSING IN THE map OBJECT*/
-    formSubmit(map)
-    /**/
-
     /*FINALLY REMOVE THE LOADER*/
-    document.querySelector(".loading").classList.remove("loading")
+    document.querySelector(".loading").classList.remove("loading");
     /**/
 }
 
@@ -174,7 +177,8 @@ function mapAddLayers(map, geojson) {
           },
           "layout": {
             "visibility": "visible"
-          }
+          },
+          "filter": ["!=", ["get", "st_type"], "ALY"]
         },
         {
           "id": "selected",
@@ -199,7 +203,23 @@ function mapAddLayers(map, geojson) {
           "layout": {
             "visibility": "visible"
           }
-        }
+        },
+        {
+          "id": "envelope",
+          "type": "fill",
+          "source": "envelope",
+          "sourceType": {
+            type: "geojson",
+            data: turf.featureCollection([])
+          },
+          "paint": {
+            "fill-color": "yellow",
+            "fill-opacity": 0.5
+          },
+          "layout": {
+            "visibility": "visible"
+          }
+        },
       ]
 
       /* ADD SOURCES AND LAYERS */
@@ -214,6 +234,10 @@ function mapAddLayers(map, geojson) {
 }
 
 function mapAddControls(map) {
+  map.addControl(new mapboxgl.NavigationControl({
+    showCompass: false
+  }));
+
   var geocoder = new MapboxGeocoder({
     accessToken: mapboxgl.accessToken,
     mapboxgl: mapboxgl,
@@ -410,6 +434,12 @@ function addToSelection(map, drawnBox, drawControl, data) {
   });
   // console.log(rawFeatures)
 
+  //RETURN NULL IF NO FEATURES ARE FOUND IN QUERY
+  if (!rawFeatures.length) {
+    drawControl.deleteAll()
+    return null
+  }
+
   var rawFeaturesIds = rawFeatures.reduce((i, f) => {
     return [...i, f.id]
   }, [])
@@ -417,37 +447,43 @@ function addToSelection(map, drawnBox, drawControl, data) {
   // console.log(rawFeaturesIds)
 
   var selected = data.features.filter(f => {
-    return rawFeaturesIds.indexOf(f.properties.id) > -1
+    return rawFeaturesIds.indexOf(f.properties.id) > -1 && f.properties.st_type != "ALY"
   });
 
-  // console.log(selected)
+  console.log(selected)
 
   var withinDrawnBox = selected.filter(f => {
-    var envelope = turf.envelope(f)
-    return (turf.booleanContains(drawnBox, envelope) || turf.booleanWithin(envelope, drawnBox) || turf.booleanOverlap(envelope, drawnBox))
+    var envelope = turf.envelope(f);
+    if (testing) map.getSource("envelope").setData(envelope);
+    return (turf.booleanContains(envelope, drawnBox) || turf.booleanContains(drawnBox, envelope) || turf.booleanWithin(envelope, drawnBox) || turf.booleanOverlap(envelope, drawnBox))
   })
 
-  let ids = [];
+  //RETURN NULL IF NO FEATURES ARE FOUND IN ENVELOPE
+  if (!withinDrawnBox.length) {
+    drawControl.deleteAll()
+    return null
+  }
 
-  if (rawFeatures.length > 0) {
-    var currentFeatures = map.getSource("selected");
-    if (currentFeatures._data.features.length) {
-      // console.log(currentFeatures);
-      var newFeatures = turf.featureCollection([...withinDrawnBox, ...currentFeatures._data.features]);
-      map.getSource("selected").setData(newFeatures);
-      ids = newFeatures.features.reduce((i, f) => {
-        return [...i, f.properties.id]
-      }, []);
-      drawControl.deleteAll()
-      return ids
-    } else {
-      map.getSource("selected").setData(turf.featureCollection(withinDrawnBox));
-      ids = withinDrawnBox.reduce((i, f) => {
-        return [...i, f.properties.id]
-      }, []);
-      drawControl.deleteAll()
-      return ids
-    }
+  var ids = [];
+
+  var currentFeatures = map.getSource("selected");
+
+  if (currentFeatures._data.features.length) {
+    // console.log(currentFeatures);
+    var newFeatures = turf.featureCollection([...withinDrawnBox, ...currentFeatures._data.features]);
+    map.getSource("selected").setData(newFeatures);
+    ids = newFeatures.features.reduce((i, f) => {
+      return [...i, f.properties.id]
+    }, []);
+    drawControl.deleteAll()
+    return ids
+  } else {
+    map.getSource("selected").setData(turf.featureCollection(withinDrawnBox));
+    ids = withinDrawnBox.reduce((i, f) => {
+      return [...i, f.properties.id]
+    }, []);
+    drawControl.deleteAll()
+    return ids
   }
 
 }
