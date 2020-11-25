@@ -1,739 +1,481 @@
-var sitePlans, featureStateId;
-
-//////////////////////////////////
-//IMPORTS ARE RELATIVE TO WHERE THE PAGE ON WHICH THE APP IS LOADED WHICH IS WHY THESE ARE ALL RELATIVE LINKS
-//////////////////////////////////
-
 import {
-  layerControlGrouped
-} from "../vendor/mapbox-layer-control-master/layerControlGrouped.js"
+  DrawRectangle
+} from "../assets/mapbox-gl-draw-rectangle-mode.js"
 
-import {
-  mglMessageButton
-} from '../assets/mglMessageButton.js'
+//USE QUERY PARAM FOR TESTING VARIOUS FEATURES
+var params = new URLSearchParams(window.location.search);
+var testing = (params.get("testing")) ? true : false;
 
-import {
-  inputFormModal,
-  inputFormModalReset,
-  inputFormModalShow
-} from '../assets/inputFormModal.js'
-
-import {
-   mglHighlightFeatureState
-} from '../assets/mglHighlightFeatureState.js'
-
-import {
-  mglLoading
-} from '../assets/mglLoading.js'
-
-import {
-  mglAddIcons
-} from '../assets/mglAddIcons.js'
-
-//////////////////////////////////
-//SETUP MODAL FORM FOR EDITING DATA USING A VERY SIMPLE JSON SCHEMA
-//////////////////////////////////
-var sitePlansSchema = {
-  "id": {
-    type: "integer",
-    name: "Database ID",
-    readonly: true
-  },
-  "edit_date": {
-    type: "text",
-    name: "Last Edited",
-    readonly: true
-  },
-  "parcels": {
-    type: "text",
-    name: "Associated Parcels",
-    readonly: true
-  },
-  "address": {
-    type: "text",
-    name: "Site Address",
-    readonly: false
-  },
-  "title": {
-    type: "text",
-    name: "Title",
-    required: true
-  },
-  "filename": {
-    type: "text",
-    name: "Filename",
-    readonly: true
-  },
-  "date_approved": {
-    type: "date",
-    name: "Date Approved",
-    required: true
-  },
-  "year": {
-    type: "select",
-    options: [2020,2019,2018,2017,2016,2015,2014,2013,2012,2011,2010],
-    name: "Year",
-    required: true
-  },
-  "file": {
-    type: "file",
-    name: "File"
-  },
-  "x": {
-    type: "number",
-    required: true,
-    name: "Longitude",
-    readonly: true
-  },
-  "y": {
-    type: "number",
-    required: true,
-    name: "Latitude",
-    readonly: true
-  },
-  "bounding_box": {
-    type: "text",
-    name: "Bounding Box",
-    readonly: true
-  }
-
-}
-
-inputFormModal(sitePlansSchema);
-
-
-//////////////////////////////////
-//CLEAR inputFormModal ON LOAD
-//////////////////////////////////
-if (window.location.hash === "#inputFormModal") {
-  console.log(window.location.hash)
-  window.location.hash = "#close"
-}
-
-//////////////////////////////////
-//ON FIRST RUN SHOW THE WELCOME MODAL
-//////////////////////////////////
-// if (!localStorage.getItem("coz--zoning-updates")) {
-//   window.location.hash = "#welcome";
-//   localStorage.setItem("coz--zoning-updates", true)
-// }
-
-//////////////////////////////////
-//PROMISE ALL TO GET ALL THE DATA THAT WE NEED, VECTOR TILES ARE ALREADY BEING SERVED ELSEWHERE
-//APPS IS PUBLIC, ANYTHING UNDER APPS/COZ IS SECURED BY WINDOWS DOMAIN ON THE SERVER FOR THE FOLDER COZ
-//////////////////////////////////
-Promise.all([
-  fetch("../get-table?table=eng_site_plans&format=geojson", {
-    cache: "reload"
-  }),
-  fetch("https://gis.coz.org/map-layers-config.json"),
-  fetch("../assets/mapillary-icons/mapillary-icons.json")
-])
-.then(res => {
-  Promise.all(res.map(r => r.json()))
-    .then(data => {
-      initMap(data)
+//GET CENTERLINE DATA USING FEATURE COLLECTION GO SERVER
+fetch("https://311.coz.org/api/v1/feature-server/collections/public.utl_streets_sweeping_centerlines/items.json")
+  .then(res => res.json())
+  .then(geojson => {
+    var map = mapInit();
+    map.on("load", function() {
+      mapOnLoad(map, geojson)
     })
-})
-.catch(err => {
-  alert("An error has occurred receiving the map data. Please refersh your browser. If the error persists contact GIS.\n", err);
-  console.log(err)
-})
-
-function initMap(data) {
-
-  sitePlans = data[0];
-
-  console.log(sitePlans)
-
-  var mask = {
-    "id": "admin-mask",
-    "type": "fill",
-    "directory": "Administrative Layers",
-    "group": "Administrative Boundaries",
-    "name": "City Mask",
-    "children": true,
-    "source": "adminSource",
-    "sourceType": {
-      "type": "vector",
-      "tiles": ["https://311.coz.org/data/vt/adm_admin_boundaries/{z}/{x}/{y}.mvt"],
-      "maxzoom": 17
-    },
-    "source-layer": "adm_admin_boundaries",
-    "paint": {
-      "fill-color": "whitesmoke",
-      "fill-opacity": 0.99
-    },
-    "layout": {
-      "visibility": "none"
-    },
-    "filter": ["!=", ["get", "name"], "ZANESVILLE"]
-  }
-
-  var maskOutline = {
-    "id": "admin-mask-outline",
-    "type": "line",
-    "parent": "admin-mask",
-    "hidden": true,
-    "directory": "Administrative Layers",
-    "group": "Administrative Boundaries",
-    "name": "City Mask 2",
-    "children": true,
-    "source": "adminSource",
-    "sourceType": {
-      "type": "vector",
-      "tiles": ["https://311.coz.org/data/vt/adm_admin_boundaries/{z}/{x}/{y}.mvt"],
-      "maxzoom": 17
-    },
-    "source-layer": "adm_admin_boundaries",
-    "paint": {
-      "line-color": "black",
-      "line-width": 4
-    },
-    "layout": {
-      "visibility": "none"
-    },
-    "filter": ["==", ["get", "name"], "ZANESVILLE"]
-  }
-
-  var sitePlansLayer = {
-    "id": "sitePlans",
-    "type": "fill",
-    "directory": "Administrative Layers",
-    "name": "Site Plans",
-    "children": true,
-    "source": "sitePlans",
-    "sourceType": {
-      "type": "geojson",
-      "data": sitePlans
-    },
-    "paint": {
-      "fill-color": "blue",
-      "fill-outline-color": "white",
-      "fill-opacity": 0.3
-    },
-    "layout": {
-      "visibility": "none"
-    }
-  }
-
-  var sitePlansOutline = {
-    "id": "sitePlansOutline",
-    "type": "line",
-    "parent": "sitePlans",
-    "hidden": true,
-    "directory": "Administrative Layers",
-    "name": "Site Plans",
-    "source": "sitePlans",
-    "sourceType": {
-      "type": "geojson",
-      "data": sitePlans
-    },
-    "paint": {
-      "line-color": "blue",
-      "line-width": 5
-    },
-    "layout": {
-      "visibility": "none"
-    }
-  }
-
-  data[1].push(mask)
-  data[1].push(maskOutline)
-  data[1].push(sitePlansLayer)
-  data[1].push(sitePlansOutline)
-
-
-  var layers = data[1].filter(d => {
-    return  d["directory"] === "Impervious Surface" || d["directory"] === "Administrative Layers" || d["directory"] === "Imagery" || d["directory"] === "City Sewer System"
+  })
+  .catch(err => {
+    alert("An error has occurred receiving the map data. Please refersh your browser. If the error persists contact the Engineering Division.", err);
+    console.log(err)
   })
 
-  layers.push({
-    id: "mapillary",
-    type: "symbol",
-    group: "Mapillary",
-    directory: "Mapillary",
-    name: "Mapillary Point Detections",
-    "children": true,
-    source: "mapillary",
-    sourceType: {
-      type: "vector",
-      tiles: [ "https://a.mapillary.com/v3/map_features?tile={z}/{x}/{y}&client_id=V3B6aHlRZVdMUG5aX1R3dnhjZFVfdzo4YmEwZjY1Mjg2ZTNhYzQ2&layers=points"],
-      attribution: "<a href='https://www.mapillary.com'>Mapillary</a>, CC BY",
-      minzoom: 12,
-      maxzoom: 17
-    },
-    "source-layer": "mapillary-points",
-    "filter": ["all",
-      ["!=", ["get", "value"], "construction--flat--driveway"],
-      ["!=", ["get", "value"], "object--sign--advertisement"],
-      ["!=", ["get", "value"], "object--sign--store"],
-      ["!=", ["get", "value"], "object--support--utility-pole"]
+function mapInit() {
+  mapboxgl.accessToken = 'pk.eyJ1IjoiY296Z2lzIiwiYSI6ImNqZ21lN2R5ZDFlYm8ycXQ0a3R2cmI2NWgifQ.z4GxUZe5JXAdoRR4E3mvpg'
 
-    ],
-    layout: {
-      "icon-image": "{value}",
-      "icon-allow-overlap": true,
-      visibility: "none"
-    }
-  })
-
-  layers.push({
-      "id": "mapillaryLabels",
-      "directory": "Mapillary",
-      "group": "Mapillary",
-      "type": "symbol",
-      "parent": "mapillary",
-      "hidden": true,
-      "name": "Mapillary Labels",
-      "source": "mapillary",
-      "source-layer": "mapillary-points",
-      "paint": {
-        "text-color": "black",
-        "text-halo-color": "white",
-        "text-halo-width": 2,
-        "text-halo-blur": 0
-      },
-      "layout": {
-        "visibility": "none",
-        "text-font": ["DIN Offc Pro Bold"],
-        "text-field": "{value}",
-        "text-anchor": "bottom-left",
-        "text-size": 14,
-        "text-offset": [0.5, -0.2]
-      },
-      "filter": ["all",
-        ["!=", ["get", "value"], "construction--flat--driveway"],
-        ["!=", ["get", "value"], "object--sign--advertisement"],
-        ["!=", ["get", "value"], "object--sign--store"],
-        ["!=", ["get", "value"], "object--support--utility-pole"]
-
-      ],
-    })
-  
-  layers.push({
-    "id": "mapillary-signs",
-    "name": "Mapillary Signs",
-    "group": "Mapillary",
-    "directory": "Mapillary",
-    "children": true,
-    "type": "circle",
-    source: "mapillary-signs",
-    sourceType: {
-      type: "vector",
-      tiles: ["https://a.mapillary.com/v3/map_features?tile={z}/{x}/{y}&client_id=V3B6aHlRZVdMUG5aX1R3dnhjZFVfdzo4YmEwZjY1Mjg2ZTNhYzQ2&layers=trafficsigns"],
-      attribution: "<a href='https://www.mapillary.com'>Mapillary</a>, CC BY",
-      minzoom: 12,
-      maxzoom: 17
-    },
-    "source-layer": "mapillary-trafficsigns",
-    "paint": {
-      "circle-color": "red",
-      "circle-radius": 6,
-      "circle-stroke-color": "white",
-      "circle-stroke-width": 2
-    },
-    "layout": {
-      "visibility": "none"
-    }
-  })
-
-  layers.push({
-    "id": "mapillary-signs-labels",
-    "name": "Mapillary Sign Detections",
-    "group": "Mapillary",
-    "directory": "Mapillary",
-    "hidden": true,
-    "parent": "mapillary-signs",
-    "type": "symbol",
-    "minzoom": 16,
-    source: "mapillary-signs",
-    sourceType: {
-      type: "vector",
-      tiles: ["https://a.mapillary.com/v3/map_features?tile={z}/{x}/{y}&client_id=V3B6aHlRZVdMUG5aX1R3dnhjZFVfdzo4YmEwZjY1Mjg2ZTNhYzQ2&layers=trafficsigns"],
-      attribution: "<a href='https://www.mapillary.com'>Mapillary</a>, CC BY",
-      minzoom: 12,
-      maxzoom: 17
-    },
-    "source-layer": "mapillary-trafficsigns",
-    "paint": {
-      "text-color": "black",
-      "text-halo-color": "white",
-      "text-halo-width": 2,
-      "text-halo-blur": 0
-    },
-    "layout": {
-      "visibility": "none",
-      "text-font": ["DIN Offc Pro Bold"],
-      "text-field": "{value}",
-      "text-anchor": "bottom-left",
-      "text-size": 14,
-      "text-offset": [0.5, -0.2]
-    },
-  })
-
-  mapboxgl.accessToken = 'pk.eyJ1IjoiY296Z2lzIiwiYSI6ImNqZ21lN2R5ZDFlYm8ycXQ0a3R2cmI2NWgifQ.z4GxUZe5JXAdoRR4E3mvpg' //TODO turn this whole thing into a route and move this to the env file
-
-  var map = new mapboxgl.Map({
+  return new mapboxgl.Map({
     container: 'map', // container id
     style: 'mapbox://styles/cozgis/cjvpkkmf211dt1dplro55m535', // stylesheet location
     center: [-82.014, 39.942], // starting position [lng, lat]
     zoom: 15, // starting zoom
-    minZoom: 14,
-    hash: true
-  })
-
-  //////////////////////////////////
-  // USE THE LOADING FUNCTION TO ADD A LOADING ICON WHENEVER THERE IS A RENDER EVENT ON THE MAP, AND REMOVE WHEN THE MAP IS LOADED
-  //////////////////////////////////
-  // mglLoading(map, "loading", "loading")
-  
-  map.on('load', function () {
-    mglAddIcons(map, data[2], function() {
-      next()
-    })
+    hash: true,
+    pitchWithRotate: false,
+    dragRotate: false,
+    touchPitch: false
   });
+}
 
-  function next() {
-    document.querySelector("#loading").classList.remove("loading")
-    //////////////////////////////////
-    //ADD SOURCES, LAYERS AND LAYER CONTROL USING CUSTOM GROUPEDLAYERCONTROL
-    //////////////////////////////////
-    layers.map(layer => {
+function mapOnLoad(map, geojson) {
+
+    /*MAP LAYERS AND CONTROLS*/
+    mapAddLayers(map, geojson);
+    mapAddControls(map);
+    var draw = mapAddDrawControl(map);
+
+    /*FORM AND FORM BUTTON EVENT LISTENERS*/
+    formAdd("sidebar")
+    formSubmit(map)
+    addStreetButtonEventListeners(map, draw) //RELIES ON DRAW CONTROL AND MAP LAYERS
+    /**/
+
+    /*MAP CLICK AND DRAW LISTENERS*/
+    map.on("draw.create", function (e) {
+      var ids = addToSelection(map, e.features[0], draw, geojson);
+      // if (ids) document.getElementById("ids").value = ids.join(",") //RELIES ON THE ELEMENT WITH ID OF "ids" IN THE FORM WHICH IS ADDED IN formAdd()
+    });
+
+    map.on("contextmenu", function() {
+      formReset(document.querySelector("form"));
+      map.getSource("selected").setData(turf.featureCollection([]))
+    })
+
+    map.on("click", mapClickListener)
+    /**/
+
+    /*FINALLY REMOVE THE LOADER*/
+    document.querySelector(".loading").classList.remove("loading");
+    /**/
+}
+
+function mapClickListener(e) {
+  console.log(this.queryRenderedFeatures(e.point))
+  let map = this;
+  mapHighlight(map);
+
+  var bbox = [
+    [e.point.x - 10, e.point.y - 10],
+    [e.point.x + 10, e.point.y + 10]
+  ];
+
+  var features = map.queryRenderedFeatures(bbox, {
+    layers: ["adm_mus_parcels"]
+  });
+  
+  if (features && features.length) {
+    console.log(features[0])
+
+    mapHighlight(map, features[0])
+
+    var flat = turf.flatten(features[0])
+    var center = turf.center(flat);
+    var p = features[0].properties;
+    var dateFormat = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
+    // var popup = new mapboxgl.Popup()
+    //   .setLngLat(center.geometry.coordinates)
+    //   .setHTML(`<h4>${p.lsn}</h4><p>This section of ${p.lsn} ${(p.st_type != 'ALY') ? `from ${p.int_from} to ${p.int_to}` : "" } ${(!p.last_swept) ? `has not been swept` : `was last swept on ${new Date(p.last_swept).toLocaleString('en-US', dateFormat)}`}.</p>`)
+    //   .on("close", function() {
+    //     if (!document.querySelector(".mapboxgl-popup")) mapHighlight(map)
+    //   })
+    //   .addTo(map)
+  }
+}
+
+function mapHighlight(map, data) {
+  if (!data) data = turf.featureCollection([])
+  if (!map.getSource("highlight")) {
+    map.addSource("highlight", {
+      type: "geojson",
+      data: data
+    })
+    map.addLayer({
+      id: "highlight",
+      type: "line",
+      source: "highlight",
+      paint: {
+        "line-color": "rgb(0, 255,255)",
+        "line-width": 4
+      }
+    })
+  }else{
+    map.getSource("highlight").setData(data)
+  }
+}
+
+function mapAddLayers(map) {
+  fetch("https://gis.coz.org/map-layers-config.json")
+  .then(res => res.json())
+  .then(layers => {
+    var mapLayers = layers.filter(l => {
+      return (l.id === "adm_mus_parcels" || l.id === "ParcelsOutline" || l.id === "eng_site_plans")
+    })
+    mapLayers.push({
+      "id": "selected",
+      "hidden": false,
+      "type": "line",
+      "source": "selected",
+      "sourceType": {
+        "type": "geojson",
+        "data": turf.featureCollection([]),
+        "generateId": true
+      },
+      "paint": {
+        "line-width": 6,
+        "line-color": "yellow",
+        "line-opacity": 1
+      },
+      "layout": {
+        "visibility": "visible"
+      }
+    })
+    mapLayers.push(
+    {
+      "id": "envelope",
+      "type": "fill",
+      "source": "envelope",
+      "sourceType": {
+        type: "geojson",
+        data: turf.featureCollection([])
+      },
+      "paint": {
+        "fill-color": "yellow",
+        "fill-opacity": 0.5
+      },
+      "layout": {
+        "visibility": "visible"
+      }
+    })
+    console.log(mapLayers)
+    mapLayers.map(layer => {
       if (layer.sourceType && (!map.getSource(layer.source))) map.addSource(layer.source, layer.sourceType)
     })
-    layers.map(layer => {
-      map.addLayer(layer)
-    })
-    var config = {
-      options: {
-        collapsed: true
-      },
-      layers: layers
-    };
-    map.addControl(new layerControlGrouped(config), "top-left");
-    
-    //////////////////////////////////
-    // INIT HIGHLIGHT FUNCTION
-    //////////////////////////////////
-    layers.map(layer => {
-      if (layer.id === "adm_mus_parcels") mglHighlightFeatureState(map, layer, layer.sourceType)
-    })    
-
-    //////////////////////////////////
-    //ADD MAPBOX GEOCODER ADDRESS SEARCH
-    //////////////////////////////////
-    var geocoder = new MapboxGeocoder({
-      accessToken: mapboxgl.accessToken,
-      mapboxgl: mapboxgl,
-      placeholder: "Address Search"
+    mapLayers.map(layer => {
+      layer.layout.visibility = "visible"
+      map.addLayer(layer, "road-label-small")
     });
-
-    map.addControl(geocoder, 'top-right')
-    //////////////////////////////////
-    
-    //////////////////////////////////
-    //ADD HELP WINDOW WELCOME MESSAGE
-    //////////////////////////////////
-    map.addControl(new mglMessageButton({
-      title: 'Site Plans',
-      message: 'This app updates the site plans table. Writes to this app will be published the following day. If you have any questions please contact GIS.'
-    }), 'top-right')
-
-    //////////////////////////////////
-    //ADD MAP CLICK LISTENER
-    //////////////////////////////////
-    map.on("click", function (e) {
-      console.log(map.queryRenderedFeatures(e.point))
-      clickListener(map, e, sitePlans)
-    })
-    //
-    
-    //////////////////////////////////
-    //REMOVE POPUP AND HIGHLIGHT ON RIGHT CLICK - HIGHLIGHT IS CLEARED WHEN MAP CLOSE BUTTON IS CLICKED
-    //////////////////////////////////
-    map.on("contextmenu", function() {
-      if (document.querySelector(".mapboxgl-popup-close-button")) document.querySelector(".mapboxgl-popup-close-button").click()
-    })
-    //
-
-    //////////////////////////////////
-    //ADD SUBMIT LISTENER TO FORM, PASSING IN THE map OBJECT
-    //////////////////////////////////
-    inputFormModalSubmitListener(map, sitePlans)
-  }
-
+  })
 }
 
-/**
- * 
- * @param {*} map map instance
- * @param {*} e clicked point
- * @param {*} table zoning table to pull properties from
- */
-function clickListener(map, e, table) {
-  inputFormModalReset(document.querySelector("form"));
+function mapAddControls(map) {
+  map.addControl(new mapboxgl.NavigationControl({
+    showCompass: false
+  }));
 
-  var popup = new mapboxgl.Popup();
+  var geocoder = new MapboxGeocoder({
+    accessToken: mapboxgl.accessToken,
+    mapboxgl: mapboxgl,
+    placeholder: "Address Search"
+  });
+  map.addControl(geocoder, 'top-left');
+}
 
-  var parcel = map.queryRenderedFeatures(e.point, {layers: ["adm_mus_parcels"]});
-  console.log(parcel)
-  if (parcel && parcel.length) {
+function mapAddDrawControl(map) {
 
-    var features = map.querySourceFeatures('parcelSource', {
-      sourceLayer: "public.adm_mus_parcels",
-      filter: ["==", "parcelnum", parcel[0].properties.parcelnum]
-    });
-  
-    if (features && features.length) {
+  //ADD MAPBOX DRAW TO ALLOW FOR SELECTING ROADS
+  var modes = MapboxDraw.modes;
 
-      featureStateId = features[0].id;
+  modes.draw_rectangle = DrawRectangle;
 
-      console.log(featureStateId)
-
-      //GET THE VALUES TO POPULATE THE POPUP MODAL FROM THE ZONING TABLE - THESE VALUES WILL CHANGE, OPTIONALLY THESE VALUES COULD COME FROM THE DATABASE ITSELF
-      var props = [];
-      table.features.forEach(t => { 
-        if(t.properties.parcelnum === features[0].properties.parcelnum) {
-          props.push(t.properties)
-        }
-      });
-
-      console.log("existing feature found:", props)
-
-      //GET PARCEL NUMBER AND PARCEL ADDRESS FROM PARCEL TO FILL IN IF NOTHING IS FOUND IN THE ZONING TABLE
-      if (props.length === 0) {
-        props[0] = {
-          id: 0,
-          parcelnum: features[0].properties.parcelnum,
-          address: features[0].properties.location_address,
-          edit_date: new Date(),
-          owner: features[0].properties.owner_contact_name,
-          x: Number(features[0].properties.inside_x),
-          y: Number(features[0].properties.inside_y)
-        }
-        if (props[0].parcelnum === "WW" || props[0].parcelnum === "RR" || !props[0].parcelnum || props[0].parcelnum === undefined || props[0].parcelnum == "9") return
-
-        popup
-        .setLngLat(e.lngLat)
-        .setHTML(formatProps(props[0]))
-        .addTo(map);
-      }else{
-
-        //LET THE DB KNOW THAT THIS HAS BEEN UPDATED ON THE CLIENTSIDE
-        if (props[0].id === "0") props[0].id = -1;
-
-        props[0].owner = features[0].properties.owner_contact_name;
-        inputFormModalSetValues(props[0]);
-
-        //SHOW POPUP FIRST WITH DATA AND ADD LINK TO SHOW INPUT MODAL FOR DATA
-        popup
-        .setLngLat(e.lngLat)
-        .setHTML(formatProps(props[0]))
-        .addTo(map);
-
-        console.log(props)
-
-      }
-      //SET VALUES OF MODAL TO POPERTIES OF EITHER NEW ZONING RECORD OR EXISTING
-      inputFormModalSetValues(props[0]);
-
+  var draw = new MapboxDraw({
+    displayControlsDefault: false,
+    modes: modes,
+    uerProperties: true,
+    controls: {
+      polygon: true
     }
-  }
+  });
 
-  function formatProps(props) {
-    return `
-    ${Object.keys(props).map(function(key) {
-      // console.log(props[key])
-      if (key === "geom") return ''
-      return `
-          <div class="bg-secondary">
-            <strong>${key.split("_").join(" ").toUpperCase()}</strong>
-          </div>
-          <div>
-            ${(!props[key]) ? "&nbsp" : (props[key] === "") ? "&nbsp" : (key === "parcelnum") ? `<a href="https://www.muskingumcountyauditor.org/Data.aspx?ParcelID=${props[key]}">${props[key]}</a>` : props[key] }
-          </div>`
-    }).join(" ")}
-    <br><a href="#inputFormModal"><button class="btn btn-sm btn-outline btn-red" style="width:100%" onclick="document.querySelector('.mapboxgl-popup-close-button').click()"><icon class="icon icon-edit"></icon> EDIT/ADD SITE PLAN</button></a>
-    `
-  }
+  map.addControl(draw)
 
+  map.on('draw.modechange', function () {
+    switch (draw.getMode()) {
+      case "draw_polygon":
+        draw.changeMode('draw_rectangle');
+      default:
+        null
+    }
+  })
+
+  document.querySelector(".mapbox-gl-draw_ctrl-draw-btn").style.display = "none"
+
+  return draw
 }
 
-/**
- * Function for submitting the data to the database via the Node App using URLSearchParams to grab the data fron the form
- * If the ID is greater than 0 then the app will update the data, otherwise the app will insert a new record
- * @param {*} map 
- * @param {*} table 
- */
-function inputFormModalSubmitListener(map, table) {
+function formSubmit(map) {
   var form = document.querySelector("form");
   if (!form) {
     console.error("no form found!")
   } else {
     form.addEventListener("submit", function (e) {
       e.preventDefault();
-
-      //ADD LOADING ONCE FORM IS OPENED
-      document.querySelector("#loading").classList.add("loading")
-
-      var data = new FormData(form);
-
-      console.log(data)
-
+      var data = new URLSearchParams(new FormData(form));
+      if (!data.get("ids")) {
+        alert("Please add some streets before attempting to save.");
+        return
+      }
       fetch('../site-plans', {
           method: 'post',
           body: data,
         })
         .then(res => {
-          console.log(res)
           if (res.status === 200) {
-
-            //////////////////////////////////
-            //CLEAR THE MODAL FORM
-            //////////////////////////////////
-            inputFormModalReset(form);
-
-            //////////////////////////////////
-            //UPDATE THE GLOBAL ZONING TABLE
-            //////////////////////////////////
-            // sitePlans = globalStateUpdate(data, table);
-
-            //////////////////////////////////
-            //CHANGE THE MAP TO REFLECT THE ZONING TABLE
-            //////////////////////////////////
-            // console.log(data.get("zoning_code"), featureStateId)
-
-            //////////////////////////////////
-            //FINALLY CHANGE THE PAINT COLOR OF THE UNDERLYING PARCELS TO THE NEW GLOBALLY STORED ZONING TABLE
-            //////////////////////////////////
-            // map.setPaintProperty("adm_mus_parcels", "fill-color", zoningPaintExpression(zoningTable))
-
+            return res.json()
           } else {
             console.log(res)
             alert("The value did not submit properly. Close the modal window and try to select another line. If the error persists contact the site administrator.")
           }
-        });
+        })
+        .then(json => {
+          return
+
+          window.location.hash = "#";
+          formReset(form);
+
+          // mapStyleNewlySweptStreet(map, json.ids)
+
+          var current = map.getSource("lines")._data;
+          current.features.map(f => {
+            if (json.ids.indexOf(f.properties.id.toString()) > -1) {
+              console.log(json.date)
+              //BUG THIS IS A WEIRD JAVASCRIPT HACK TO GET THE DATE TO READ CORRECTLY 
+              //IT READS CORRECTLY COMING FROM THE DATABASE ORIGINALLY, JUST NOT HERE UNLESS YOU USE THIS HACK
+              //SEE https://stackoverflow.com/questions/7556591/is-the-javascript-date-object-always-one-day-off
+
+              if (f.properties.last_swept < new Date(json.date.replace(/-/g, '\/')).getTime()) {
+                f.properties.last_swept = new Date(json.date.replace(/-/g, '\/')).getTime();
+              }
+              // console.log(f.properties.last_swept)
+            }
+          });
+          map.getSource("lines").setData(current)
+          map.getSource("selected").setData(turf.featureCollection([]))
+        })
+        .catch(err => {
+          alert("An error has occurred.")
+          console.log(err)
+        })
     })
   }
 }
 
-//////////////////////////////////
-//CANT KEEP THIS IN THE INPUTFORMMODAL JS FILE DUE TO HAVING CUSTOM VALUES FOR DATE FIELD NAMES
-//////////////////////////////////
-function inputFormModalSetValues(props) {
-  // console.log(props);
-  for (let p in props) {
-    if (p === "filename" && props[p] != null) {
-      document.querySelector("#file").disabled = true
-    }
-    if (document.querySelector("#" + p)) {
-      if (!props[p]) {
-        document.querySelector("#" + p).value = ""
-      }
-      if (p === "date_approved" && props[p] != "" && props[p] != null) {
-        // console.log((props[p]).substring(10))
-        document.querySelector("#" + p).value = (props[p]).substring(0,10)
-      }else{
-        document.querySelector("#" + p).value = props[p]
-      }
+function formReset(form) {
+  var inputs = form.querySelectorAll("input");
+  for (var i = 0; i < inputs.length; i++) {
+    if (inputs[i].type === "date") {
+      inputs[i].value = new Date().toISOString().slice(0, 10)
+    } else {
+      inputs[i].value = "";
     }
   }
 }
 
+function formAdd(el) {
+  //SHOW SIDEBAR
+  var sidebar = document.getElementById(el);
+  sidebar.style.display = "flex";
+  document.getElementById("map").style.left = "340px";
+  document.getElementById("map").style.right = 0
+  document.getElementById("map").style.width = "unset";
 
-
-//////////////////////////////////
-//UPDATE OR ADD TO THE GLOBALLY STORED ZONING TABLE
-//
-//MOVE THIS TO FETCH TABLE AGAIN AND REBUILD THE ZONING TABLE AND PARCEL PAINT TABLE - MAYBE JUST THIS ONLY FOR THE RECENT PARCEL
-//////////////////////////////////
-function globalStateUpdate(data, table) {
+  //ADD SIDEBAR FORM
+  var sweepingForm = `
+  <header>
+    <h1>Site Plans App</h1>
+  </header>
+  <section style="flex:unset">
+  <form class="form" action="/street-sweeping" method="post" style="border: solid thin lightgray; padding: 0.5rem;margin: 1rem 0;">
+    <div class="form-group">
+      <button id="add-data" class="js-btn btn" type="button" style="width:100%">Add Parcels</button>
+    </div>
+    <div class="form-group">
+      <input class="form-input" id="date" name="date" type="date" value="${new Date().toISOString().slice(0,10)}">
+    </div>
+    <div class="form-group">
+      <input class="form-input" id="ids" name="ids" type="text" style="display:none">
+    </div>
+    <div class="form-group">
+      <button class="btn btn-success input-group-btn btn-lg" type="submit" style="width:100%">Submit</button>
+    </div>
+  </form>
+  </section>
+  <section>
+  <details class="accordion" open>
+    <summary class="accordion-header">
+    <i class="icon icon-arrow-right mr-1"></i>
+    Legend
+    </summary>
+    <div class="accordion-body">
+    <p style="margin:0.8rem">
+      <i class="fas fa-square" style="color: deepskyblue"></i> Swept in the past 3 Months<br>
+      <i class="fas fa-square" style="color: orange"></i> Swept in the past 6 Months<br>
+      <i class="fas fa-square" style="color: red"></i> Swept in the past 12 Months
+    </p>
+    </div>
+  </details>
   
-  var obj = paramsToObject(data)
-  
-  var match = false;
 
-  table.map((t,i) => {
-    if (table[i].parcelnum === obj.parcelnum) {
-      table[i] = obj;
-      match = true;
-    }
+  <details class="accordion" open>
+    <summary class="accordion-header">
+      <i class="icon icon-arrow-right mr-1"></i>
+      Instructions
+    </summary>
+    <div class="accordion-body">
+      <ol>
+        <li>Click Add Parcels.</li>
+        <li>Draw a box on the map to select the streets.</li>
+        <li>Click the map and then drag. Holding down the mouse button will move the map.</li>
+        <li>If you need to add more streets, click Add Parcels again. If you need to remove streets, start over using the reset button.</li>
+        <li>Set the Date (defaults to today's date).</li>
+        <li>Click Submit.</li>
+      </ol>
+      <em>Right clicking the mouse will also reset the form and map.</em>
+    </div>
+  </details>
+
+  <details class="accordion">
+    <summary class="accordion-header">
+      <i class="icon icon-arrow-right mr-1"></i>
+      Possible Future Additions 
+    </summary>
+    <div class="accordion-body">
+      <ul>
+      <li>Table showing history of sweeping for street section</li>
+      <li>Add feature to edit/remove streets already marked as swept</li>
+      <li>Date Picker to Filter Sweeping</li>
+      <li>Dashboard View</li>
+      </ul>
+    </div>
+  </details>
+</section>
+<footer>
+<button id="reset-streets" class="btn btn-error" style="width: 100%";>Reset</button>
+</footer>
+
+  `
+
+  sidebar.innerHTML += sweepingForm;
+}
+
+async function addToSelection(map, drawnBox, drawControl, data) {
+
+  var bbox = turf.bbox(drawnBox);
+  var bbox1 = map.project([bbox[0], bbox[1]]);
+  var bbox2 = map.project([bbox[2], bbox[3]]);
+
+  var rawFeatures = map.queryRenderedFeatures([
+    [bbox1.x, bbox1.y],
+    [bbox2.x, bbox2.y]
+  ], {
+    layers: ["adm_mus_parcels"]
+  });
+  console.log(rawFeatures)
+
+  //RETURN NULL IF NO FEATURES ARE FOUND IN QUERY
+  if (!rawFeatures.length) {
+    drawControl.deleteAll()
+    return null
+  }
+
+  var rawFeaturesIds = rawFeatures.reduce((i, f) => {
+    return [...i, f.id]
+  }, [])
+
+  console.log(rawFeaturesIds)
+
+  if (!rawFeaturesIds.length) {
+    return
+  }
+
+  const req = await fetch(`../get-table?table=adm_mus_parcels&format=geojson&where=id%20in(${rawFeaturesIds.join(",")})`)
+  const geojsonFeatures = await req.json();
+  console.log(geojsonFeatures)
+
+  var selected = geojsonFeatures.features.filter(f => {
+    let p = f.properties;
+    return (p.parcelnum != "WW" && p.parcelnum != "RR" && p.parcelnum != undefined && p.parcelnum != "9")
   });
 
-  if (!match) table.push(obj)
-  
-  return table
-}
+  console.log(selected)
 
-//////////////////////////////////
-//CONVERT URLSearchParams to JSON OBJECT
-//
-//TODO MOVE TO HELPER IMPORT
-//////////////////////////////////
-function paramsToObject(entries) {
-  let result = {}
-  for(let entry of entries) {
-    const [key, value] = entry;
-    result[key] = value;
+  var withinDrawnBox = selected.filter(f => {
+    var envelope = turf.envelope(f);
+    if (testing) map.getSource("envelope").setData(envelope);
+    return (turf.booleanContains(envelope, drawnBox) || turf.booleanContains(drawnBox, envelope) || turf.booleanWithin(envelope, drawnBox) || turf.booleanOverlap(envelope, drawnBox))
+  })
+
+  //RETURN NULL IF NO FEATURES ARE FOUND IN ENVELOPE
+  if (!withinDrawnBox.length) {
+    drawControl.deleteAll()
+    return null
   }
-  return result;
-}
 
-/* -----------------
->>>>NEW WORKFLOW<<<<
-1. CLICK POLYGON DRAW BUTTON - CHANGED IN JS TO SAY ADD NEW SITE PLAN
-2. DRAW BOUNDING BOX
-3. ON CREATE OPENS EDITING MODAL
-4. CHANGE PARCELNUM TO PARCELS, SEPARATED BY COMMAS
-5. AUTO ADD ADDRESS BY SELECTING ADDRESS OF CENTROID OF BOUNDING BOX AND PARCEL LAYER
-6. AUTO ADD AT LEAST ONE PARCEL BY SAME METHOD
-7. SAVE, ALSO SAVING CENTROID OF BOUNDING BOX
-8. ON SAVE DELETE ALL ITEMS DRAW
-9. ON CLICK OF SITE PLANS BOUNDS OPEN MODAL WINDOW TO EDIT - DISABLING TO FILE BUTTON AND REPLACING IT WITH FILE NAME
-------------------- */
+  var ids = [];
 
-//TODO ADD OPTION TO DELETE FILE
-//TODO ADD OPTION TO CHANGE FILE
-//TODO ADD A SIDEBAR WITH LIST OF SITE PLANS
-//TODO ADD A SEARCH FOR SITE PLANS
-//TODO ADD A FILTER FOR SITE PLANS
+  var currentFeatures = map.getSource("selected");
 
-//EXAMPLE OF DRAWING A BOUNDING BOX USING CUSTOM MODE AND MAPBOX GL JS DRAW
+  console.log(map.getSource("selected"))
 
-/*
-import { DrawRectangle } from "/mapbox-gl-draw-rectangle-mode.js"
-
-var modes = MapboxDraw.modes;
-
-modes.draw_rectangle = DrawRectangle;
-
-var draw = new MapboxDraw({
-  modes: modes,
-  uerProperties: true
-});
-map.addControl(draw);
-
-//REMOVE ALL OTHER DRAW MODES EXCEPT POLYGON, THEN REPLACE WITH RECTANGLE WHEN ACTIVATED
-var drawTools = document.querySelectorAll(".mapbox-gl-draw_ctrl-draw-btn");
-Object.keys(drawTools).map(t => {
-  if (drawTools[t].classList.contains("mapbox-gl-draw_polygon") || drawTools[t].classList.contains("mapbox-gl-draw_trash")) {
-
+  if (currentFeatures._data.features.length) {
+    var newFeatures = turf.featureCollection([...withinDrawnBox, ...currentFeatures._data.features]);
+    map.getSource("selected").setData(newFeatures);
+    ids = newFeatures.features.reduce((i, f) => {
+      return [...i, f.properties.id]
+    }, []);
+    drawControl.deleteAll()
+    return ids
   } else {
-    drawTools[t].style.display = "none"
+    map.getSource("selected").setData(turf.featureCollection(withinDrawnBox));
+    ids = withinDrawnBox.reduce((i, f) => {
+      return [...i, f.properties.id]
+    }, []);
+    drawControl.deleteAll()
+    return ids
   }
-});
 
-map.on('draw.modechange', function () {
-  switch (draw.getMode()) {
-    case "draw_line_string": draw.changeMode('draw_rectangle');
-    case "draw_point": draw.changeMode('draw_rectangle');
-    case "draw_polygon": draw.changeMode('draw_rectangle');
-    default: null
-  }
-})
+}
 
-map.on('draw.create', function (feature) {
-  console.log(feature);
-});
-    */
+function addStreetButtonEventListeners(map, drawControl) {
+  //ADD EVENT LISTENER FOR ADD STREETS BUTTON TO CHANGE DRAW MODE TO draw_rectable
+  document.querySelector("#add-data").addEventListener("click", function (e) {
+    if (e.target.classList.contains("btn-success")) {
+      e.target.classList.remove("btn-success")
+      drawControl.changeMode("simple_select")
+    } else {
+      e.target.classList.add("btn-success")
+      drawControl.changeMode("draw_rectangle")
+      map.off("click", mapClickListener)
+    }
+  })
+
+  map.on('draw.modechange', function () {
+    if (drawControl.getMode() === "simple_select") {
+      document.querySelector("#add-data").classList.remove("btn-success")
+      setTimeout(function() {
+        map.on("click", mapClickListener)
+      }, 1000)
+    }
+  })
+
+  document.querySelector("#reset-streets").addEventListener("click", function () {
+    map.getSource("selected").setData(turf.featureCollection([]));
+  })
+}

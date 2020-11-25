@@ -22,7 +22,7 @@ module.exports = {
       const file = req.body.file;
       filename = (!filename) ? req.body.file.name : filename;
       try {
-        fs.writeFileSync('/inetpub/wwwroot/data/site-plans/' + file.name, file.data)
+        fs.writeFileSync('/inetpub/wwwroot/data/attachments/site-plans/' + file.name, file.data)
       }catch(err) {
         throw new Error(err)
       }

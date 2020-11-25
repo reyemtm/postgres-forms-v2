@@ -25,7 +25,8 @@ module.exports = function (fastify, opts, next) {
       "dev_zoning_table",
       "adm_mus_parcels",
       "trn_mus_centerlines",
-      "utl_streets_sweeping_tracker"
+      "utl_streets_sweeping_tracker",
+      "adm_mus_parcels"
     ]
     if (!query.table || tables.indexOf(query.table) < 0) {
       res.status(404)
@@ -36,7 +37,7 @@ module.exports = function (fastify, opts, next) {
     var transformation = '+proj=lcc +lat_1=40.03333333333333 +lat_2=38.73333333333333 +lat_0=38 +lon_0=-82.5 +x_0=600000 +y_0=0 +ellps=GRS80 +towgs84=-0.9956,1.9013,0.5215,0.025915,0.009246,0.011599,-0.00062 +units=us-ft +no_defs'
 
     if (geojson) {
-      this.pg.query(`SELECT *, ST_Transform(geom, '${transformation}', 4326) as geometry FROM ${query.table} ORDER BY id ASC`, (err, data) => {
+      this.pg.query(`SELECT *, ST_Transform(geom, '${transformation}', 4326) as geometry FROM ${query.table} ${(!query.where) ? "" : `WHERE ${query.where}`} ORDER BY id ASC LIMIT 20000`, (err, data) => {
         if (err) {
           this.log.error(err);
           res.status(404);
@@ -65,6 +66,7 @@ module.exports = function (fastify, opts, next) {
       })
     }else{
       if (query.where || query.fields) {
+        console.log(query)
         this.pg.query(`SELECT ${(!query.fields) ? "*" : `${query.fields}`} FROM ${query.table} ${(!query.where) ? "" : `WHERE ${query.where}`} ORDER BY id ASC`, (err, data) => {
           if (err) {
             this.log.error(err);

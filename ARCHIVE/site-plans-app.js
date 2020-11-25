@@ -1,4 +1,16 @@
-var zoningTable, zoningFeatureStateId, zoningPaintTable, zoningSchema;
+/*
+Workflow with Sidebar
+1. Click parcel
+2. add file
+3. get filename from file
+4. get address from parcel
+5. 
+*/
+
+
+
+
+var sitePlans, featureStateId;
 
 //////////////////////////////////
 //IMPORTS ARE RELATIVE TO WHERE THE PAGE ON WHICH THE APP IS LOADED WHICH IS WHY THESE ARE ALL RELATIVE LINKS
@@ -6,54 +18,34 @@ var zoningTable, zoningFeatureStateId, zoningPaintTable, zoningSchema;
 
 import {
   layerControlGrouped
-} from "../vendor/mapbox-layer-control-master/layerControlGrouped.js"
+} from "../static/vendor/mapbox-layer-control-master/layerControlGrouped.js"
 
 import {
   mglMessageButton
-} from '../assets/mglMessageButton.js'
+} from '../static/assets/mglMessageButton.js'
 
 import {
   inputFormModal,
   inputFormModalReset,
   inputFormModalShow
-} from '../assets/inputFormModal.js'
+} from '../static/assets/inputFormModal.js'
 
 import {
    mglHighlightFeatureState
-} from '../assets/mglHighlightFeatureState.js'
+} from '../static/assets/mglHighlightFeatureState.js'
 
 import {
   mglLoading
-} from '../assets/mglLoading.js'
+} from '../static/assets/mglLoading.js'
 
-//////////////////////////////////
-//MASTER COLORS FOR ZONING LAYER
-//////////////////////////////////
-zoningPaintTable = {
-  "RS-1": "YELLOW",
-  "RS-2": "GOLD",
-  "RS-3": "ORANGE",
-  "RS-4": "DARKORANGE",
-  "RS-5": "rgb(179,78,11)",
-  "RA-1": "LIGHTBLUE",
-  "RM-1": "DEEPSKYBLUE",
-  "RM-2": "ROYALBLUE",
-  "C-1":  "PINK",
-  "C-2": "INDIANRED",
-  "C-3": "CRIMSON",
-  "C-4": "MAROON",
-  "I-1": "GRAY",
-  "O-1": "VIOLET",
-  "O-2": "MAGENTA",
-  "AE":  "YELLOWGREEN",
-  "PUD": "PURPLE",
-  "9999": "lightgray"
-}
+import {
+  mglAddIcons
+} from '../static/assets/mglAddIcons.js'
 
 //////////////////////////////////
 //SETUP MODAL FORM FOR EDITING DATA USING A VERY SIMPLE JSON SCHEMA
 //////////////////////////////////
-zoningSchema = {
+var sitePlansSchema = {
   "id": {
     type: "integer",
     name: "Database ID",
@@ -64,42 +56,62 @@ zoningSchema = {
     name: "Last Edited",
     readonly: true
   },
-  "parcelnum": {
+  "parcels": {
     type: "text",
-    name: "Parcel Number",
+    name: "Associated Parcels",
     readonly: true
   },
-  "parcel_address": {
+  "address": {
     type: "text",
-    name: "Parcel Address",
-    readonly: true
+    name: "Site Address",
+    readonly: false
   },
-  "zoning_code": {
-    type: "select",
-    options:  (Object.keys(zoningPaintTable)).sort(),
-    name: "Zoning Code",
+  "title": {
+    type: "text",
+    name: "Title",
     required: true
   },
-  "zoning_ord": {
+  "filename": {
     type: "text",
-    name: "Ordinance"
+    name: "Filename",
+    readonly: true
   },
-  "zoning_ord_date": {
+  "date_approved": {
     type: "date",
-    name: "Ordinance Date",
+    name: "Date Approved",
     required: true
   },
-  "zoning_ord_text": {
-    type: "text",
-    name: "Ordinance Summary"
+  "year": {
+    type: "select",
+    options: [2020,2019,2018,2017,2016,2015,2014,2013,2012,2011,2010],
+    name: "Year",
+    required: true
   },
-  "zoning_notes": {
+  "file": {
+    type: "file",
+    name: "File"
+  },
+  "x": {
+    type: "number",
+    required: true,
+    name: "Longitude",
+    readonly: true
+  },
+  "y": {
+    type: "number",
+    required: true,
+    name: "Latitude",
+    readonly: true
+  },
+  "bounding_box": {
     type: "text",
-    name: "Comments"
+    name: "Bounding Box",
+    readonly: true
   }
+
 }
 
-inputFormModal(zoningSchema);
+inputFormModal(sitePlansSchema);
 
 
 //////////////////////////////////
@@ -113,22 +125,20 @@ if (window.location.hash === "#inputFormModal") {
 //////////////////////////////////
 //ON FIRST RUN SHOW THE WELCOME MODAL
 //////////////////////////////////
-if (!localStorage.getItem("coz--zoning-updates")) {
-  window.location.hash = "#welcome";
-  localStorage.setItem("coz--zoning-updates", true)
-}
+// if (!localStorage.getItem("coz--zoning-updates")) {
+//   window.location.hash = "#welcome";
+//   localStorage.setItem("coz--zoning-updates", true)
+// }
 
 //////////////////////////////////
 //PROMISE ALL TO GET ALL THE DATA THAT WE NEED, VECTOR TILES ARE ALREADY BEING SERVED ELSEWHERE
-//APPS IS PUBLIC, ANYTHING UNDER APPS/COZ IS SECURED BY WINDOWS READ/WRITE SECTURIY ON THE SERVER FOR THE FOLDER COZ
+//APPS IS PUBLIC, ANYTHING UNDER APPS/COZ IS SECURED BY WINDOWS DOMAIN ON THE SERVER FOR THE FOLDER COZ
 //////////////////////////////////
 Promise.all([
-  fetch("../get-table?table=dev_zoning_table", {
+  fetch("../get-table?table=eng_site_plans&format=geojson", {
     cache: "reload"
   }),
-  // fetch("/apps/get-table?table=adm_mus_parcels&fields=id,parcelnum"),
-  // fetch("https://311.coz.org/data/geocoders/parcelsGeocoder.json"),
-  fetch("https://gis.coz.org/map-layers-config.json")
+  fetch("https://gis.coz.org/map-layers-config.json"),
 ])
 .then(res => {
   Promise.all(res.map(r => r.json()))
@@ -141,41 +151,15 @@ Promise.all([
   console.log(err)
 })
 
-//////////////////////////////////
-//FN TO Calculate color for each parcel based on zoning code
-// THIS MAKES THE MAP A BIT SLOW AS MAPBOX HAS TO PARSE A LARGE ARRAY, BUT IT IS THE ONLY WAY TO DO THIS DYNAMICALLY WITHOUT CALLING THE DATABASE
-//////////////////////////////////
-function zoningPaintExpression(table) {
-  var parcels = [];
-  var expression = ['match', ['get', 'parcelnum']];
-  table.forEach(function (row) {
-    if (parcels.indexOf(row.parcelnum) < 0) {
-      expression.push(row.parcelnum, zoningPaintTable[row.zoning_code])
-      parcels.push(row.parcelnum);
-    }
-  });
-  expression.push('COMMON AREA', "lightgray")
-  expression.push('black');
-  return expression
-}
-
 function initMap(data) {
-  console.log(data)
-  var now = Date.now()
-  console.log("mapping parcel id to zoning table")
-  zoningTable = data[0].slice();
 
-  // var zoningParcelColors = zoningParcelCodeMap(zoningTable);
+  sitePlans = data[0];
 
-  // console.log(zoningParcelColors)
-
-  // zoningTable = parcelIdMapToZoningTable(data[1], data[0])
-  console.log(Date.now() - now)
+  console.log(sitePlans)
 
   var mask = {
     "id": "admin-mask",
     "type": "fill",
-    "children": true,
     "directory": "Administrative Layers",
     "group": "Administrative Boundaries",
     "name": "City Mask",
@@ -183,10 +167,10 @@ function initMap(data) {
     "source": "adminSource",
     "sourceType": {
       "type": "vector",
-      "tiles": ["https://311.coz.org/api/v1/vector=tiles/public.adm_admin_boundaries/{z}/{x}/{y}.pbf"],
-      "maxzoom": 20
+      "tiles": ["https://311.coz.org/data/vt/adm_admin_boundaries/{z}/{x}/{y}.mvt"],
+      "maxzoom": 17
     },
-    "source-layer": "public.adm_admin_boundaries",
+    "source-layer": "adm_admin_boundaries",
     "paint": {
       "fill-color": "whitesmoke",
       "fill-opacity": 0.99
@@ -209,10 +193,10 @@ function initMap(data) {
     "source": "adminSource",
     "sourceType": {
       "type": "vector",
-      "tiles": ["https://311.coz.org/api/v1/vector=tiles/public.adm_admin_boundaries/{z}/{x}/{y}.pbf"],
-      "maxzoom": 20
+      "tiles": ["https://311.coz.org/data/vt/adm_admin_boundaries/{z}/{x}/{y}.mvt"],
+      "maxzoom": 17
     },
-    "source-layer": "public.adm_admin_boundaries",
+    "source-layer": "adm_admin_boundaries",
     "paint": {
       "line-color": "black",
       "line-width": 4
@@ -223,35 +207,57 @@ function initMap(data) {
     "filter": ["==", ["get", "name"], "ZANESVILLE"]
   }
 
+  var sitePlansLayer = {
+    "id": "sitePlans",
+    "type": "fill",
+    "directory": "Administrative Layers",
+    "name": "Site Plans",
+    "children": true,
+    "source": "sitePlans",
+    "sourceType": {
+      "type": "geojson",
+      "data": sitePlans
+    },
+    "paint": {
+      "fill-color": "blue",
+      "fill-outline-color": "white",
+      "fill-opacity": 0.3
+    },
+    "layout": {
+      "visibility": "none"
+    }
+  }
+
+  var sitePlansOutline = {
+    "id": "sitePlansOutline",
+    "type": "line",
+    "parent": "sitePlans",
+    "hidden": true,
+    "directory": "Administrative Layers",
+    "name": "Site Plans",
+    "source": "sitePlans",
+    "sourceType": {
+      "type": "geojson",
+      "data": sitePlans
+    },
+    "paint": {
+      "line-color": "blue",
+      "line-width": 5
+    },
+    "layout": {
+      "visibility": "none"
+    }
+  }
+
   data[1].push(mask)
   data[1].push(maskOutline)
+  data[1].push(sitePlansLayer)
+  data[1].push(sitePlansOutline)
+
 
   var layers = data[1].filter(d => {
-    return d["directory"] === "Administrative Layers"
+    return  d["directory"] === "Impervious Surface" || d["directory"] === "Administrative Layers" || d["directory"] === "Imagery" || d["directory"] === "City Sewer System"
   })
-
-  //////////////////////////////////
-  // USE THE EXPRESSION FUNCTION TO PAINT THE PARCELS THAT HAVE A MATCH IN THE ZONING TABLE THE APPRORIATE COLOR ON THE FIRST PAINT
-  //////////////////////////////////
-  layers.map(l => {
-    if (l.id === "adm_mus_parcels") {
-      // l.paint["fill-color"] = [
-      //   "let",
-      //   "p",
-      //   ["get", "parcelnum"],
-      //   table
-      // ]
-
-      l.paint["fill-color"] = zoningPaintExpression(zoningTable)
-      // l.paint["fill-color"] = ['feature-state', 'color']
-      // l.paint["fill-color"] = "BLACK"
-      l.paint["fill-opacity"] = 0.8
-      l.name = "Parcels (Zoning Code)"
-    }
-    if (l.id ==="ParcelsOutline") {
-      l.paint["line-width"] = 1
-    }
-  });
 
   mapboxgl.accessToken = 'pk.eyJ1IjoiY296Z2lzIiwiYSI6ImNqZ21lN2R5ZDFlYm8ycXQ0a3R2cmI2NWgifQ.z4GxUZe5JXAdoRR4E3mvpg' //TODO turn this whole thing into a route and move this to the env file
 
@@ -267,24 +273,14 @@ function initMap(data) {
   //////////////////////////////////
   // USE THE LOADING FUNCTION TO ADD A LOADING ICON WHENEVER THERE IS A RENDER EVENT ON THE MAP, AND REMOVE WHEN THE MAP IS LOADED
   //////////////////////////////////
-  mglLoading(map, "loading", "loading")
+  // mglLoading(map, "loading", "loading")
   
-  var zoningLegend = document.createElement("div");
-  zoningLegend.style.background = "white";
-  zoningLegend.style.margin = "10px";
-  zoningLegend.style.padding = "5px";
-  zoningLegend.borderRadius = "3px";
-  zoningLegend.innerHTML = `
-    ${Object.keys(zoningPaintTable).map(t => {
-      return `<div style='width:18px;height:18px;background:${zoningPaintTable[t]};float:left'>&nbsp;</div>&nbsp;&nbsp;${t}<br>`
-    }).join(" ")}
-  `
-  document.querySelector(".mapboxgl-ctrl-bottom-left").insertBefore(zoningLegend, document.querySelector(".mapboxgl-ctrl-bottom-left").children[0])
-
-  // map.showTileBoundaries = true
-
   map.on('load', function () {
+    next()
+  });
 
+  function next() {
+    document.querySelector("#loading").classList.remove("loading")
     //////////////////////////////////
     //ADD SOURCES, LAYERS AND LAYER CONTROL USING CUSTOM GROUPEDLAYERCONTROL
     //////////////////////////////////
@@ -325,15 +321,16 @@ function initMap(data) {
     //ADD HELP WINDOW WELCOME MESSAGE
     //////////////////////////////////
     map.addControl(new mglMessageButton({
-      title: 'Zoning Table Updates',
-      message: 'This app updates the zoning table stored in the GIS database. Writes to this app will be published the following day on the official zoning web map. If you have any questions please contact GIS.'
+      title: 'Site Plans',
+      message: 'This app updates the site plans table. Writes to this app will be published the following day. If you have any questions please contact GIS.'
     }), 'top-right')
 
     //////////////////////////////////
     //ADD MAP CLICK LISTENER
     //////////////////////////////////
     map.on("click", function (e) {
-      clickListener(map, e, zoningTable)
+      console.log(map.queryRenderedFeatures(e.point))
+      clickListener(map, e, sitePlans)
     })
     //
     
@@ -348,9 +345,9 @@ function initMap(data) {
     //////////////////////////////////
     //ADD SUBMIT LISTENER TO FORM, PASSING IN THE map OBJECT
     //////////////////////////////////
-    inputFormModalSubmitListener(map, zoningTable)
+    inputFormModalSubmitListener(map, sitePlans)
+  }
 
-  });
 }
 
 /**
@@ -360,6 +357,7 @@ function initMap(data) {
  * @param {*} table zoning table to pull properties from
  */
 function clickListener(map, e, table) {
+  inputFormModalReset(document.querySelector("form"));
 
   var popup = new mapboxgl.Popup();
 
@@ -374,31 +372,31 @@ function clickListener(map, e, table) {
   
     if (features && features.length) {
 
-      zoningFeatureStateId = features[0].id;
+      featureStateId = features[0].id;
 
-      console.log(zoningFeatureStateId)
+      console.log(featureStateId)
 
       //GET THE VALUES TO POPULATE THE POPUP MODAL FROM THE ZONING TABLE - THESE VALUES WILL CHANGE, OPTIONALLY THESE VALUES COULD COME FROM THE DATABASE ITSELF
-      var props = table.filter(t => { return t.parcelnum === features[0].properties.parcelnum });
-      console.log(props)
+      var props = [];
+      table.features.forEach(t => { 
+        if(t.properties.parcelnum === features[0].properties.parcelnum) {
+          props.push(t.properties)
+        }
+      });
+
+      console.log("existing feature found:", props)
 
       //GET PARCEL NUMBER AND PARCEL ADDRESS FROM PARCEL TO FILL IN IF NOTHING IS FOUND IN THE ZONING TABLE
-
       if (props.length === 0) {
         props[0] = {
           id: 0,
           parcelnum: features[0].properties.parcelnum,
-          parcel_address: features[0].properties.location_address,
+          address: features[0].properties.location_address,
           edit_date: new Date(),
-          zoning_code: "",
-          zoning_notes: "",
-          zoning_ord: "",
-          zoning_ord_date: "",
-          zoning_ord_text: "",
           owner: features[0].properties.owner_contact_name,
-          split: features[0].properties.split,
+          x: Number(features[0].properties.inside_x),
+          y: Number(features[0].properties.inside_y)
         }
-
         if (props[0].parcelnum === "WW" || props[0].parcelnum === "RR" || !props[0].parcelnum || props[0].parcelnum === undefined || props[0].parcelnum == "9") return
 
         popup
@@ -406,12 +404,11 @@ function clickListener(map, e, table) {
         .setHTML(formatProps(props[0]))
         .addTo(map);
       }else{
-        
+
         //LET THE DB KNOW THAT THIS HAS BEEN UPDATED ON THE CLIENTSIDE
         if (props[0].id === "0") props[0].id = -1;
 
         props[0].owner = features[0].properties.owner_contact_name;
-        props[0].split = features[0].properties.split;
         inputFormModalSetValues(props[0]);
 
         //SHOW POPUP FIRST WITH DATA AND ADD LINK TO SHOW INPUT MODAL FOR DATA
@@ -433,6 +430,7 @@ function clickListener(map, e, table) {
     return `
     ${Object.keys(props).map(function(key) {
       // console.log(props[key])
+      if (key === "geom") return ''
       return `
           <div class="bg-secondary">
             <strong>${key.split("_").join(" ").toUpperCase()}</strong>
@@ -441,16 +439,11 @@ function clickListener(map, e, table) {
             ${(!props[key]) ? "&nbsp" : (props[key] === "") ? "&nbsp" : (key === "parcelnum") ? `<a href="https://www.muskingumcountyauditor.org/Data.aspx?ParcelID=${props[key]}">${props[key]}</a>` : props[key] }
           </div>`
     }).join(" ")}
-    <br><a href="#inputFormModal"><button class="btn btn-sm btn-outline btn-red" style="width:100%" onclick="document.querySelector('.mapboxgl-popup-close-button').click()"><icon class="icon icon-edit"></icon> EDIT/ADD ZONING</button></a>
+    <br><a href="#inputFormModal"><button class="btn btn-sm btn-outline btn-red" style="width:100%" onclick="document.querySelector('.mapboxgl-popup-close-button').click()"><icon class="icon icon-edit"></icon> EDIT/ADD SITE PLAN</button></a>
     `
   }
 
 }
-
-
-
-//TODO it would be nice if each time the data is updated a version of the existing data is either moved to an archive or is marked as archived and saved in the same table with a creation and an updated date
-//TODO could be moved to the inputFormModal script using the callback, form id and post target as parameters
 
 /**
  * Function for submitting the data to the database via the Node App using URLSearchParams to grab the data fron the form
@@ -469,13 +462,16 @@ function inputFormModalSubmitListener(map, table) {
       //ADD LOADING ONCE FORM IS OPENED
       document.querySelector("#loading").classList.add("loading")
 
-      var data = new URLSearchParams(new FormData(form));
+      var data = new FormData(form);
 
-      fetch('../zoning-updates', {
+      console.log(data)
+
+      fetch('../site-plans', {
           method: 'post',
           body: data,
         })
         .then(res => {
+          console.log(res)
           if (res.status === 200) {
 
             //////////////////////////////////
@@ -484,24 +480,19 @@ function inputFormModalSubmitListener(map, table) {
             inputFormModalReset(form);
 
             //////////////////////////////////
-            //CLEAR THE HIGHLIGHT ON THE MAP
-            //////////////////////////////////
-            // highlightClear(map); NOW USING FEATURE STATE IMPORTED FN WITH CLONED LAYER
-
-            //////////////////////////////////
             //UPDATE THE GLOBAL ZONING TABLE
             //////////////////////////////////
-            zoningTable = zoningTableUpdate(data, table);
+            // sitePlans = globalStateUpdate(data, table);
 
             //////////////////////////////////
             //CHANGE THE MAP TO REFLECT THE ZONING TABLE
             //////////////////////////////////
-            console.log(data.get("zoning_code"), zoningFeatureStateId)
+            // console.log(data.get("zoning_code"), featureStateId)
 
             //////////////////////////////////
             //FINALLY CHANGE THE PAINT COLOR OF THE UNDERLYING PARCELS TO THE NEW GLOBALLY STORED ZONING TABLE
             //////////////////////////////////
-            map.setPaintProperty("adm_mus_parcels", "fill-color", zoningPaintExpression(zoningTable))
+            // map.setPaintProperty("adm_mus_parcels", "fill-color", zoningPaintExpression(zoningTable))
 
           } else {
             console.log(res)
@@ -518,11 +509,14 @@ function inputFormModalSubmitListener(map, table) {
 function inputFormModalSetValues(props) {
   // console.log(props);
   for (let p in props) {
+    if (p === "filename" && props[p] != null) {
+      document.querySelector("#file").disabled = true
+    }
     if (document.querySelector("#" + p)) {
       if (!props[p]) {
         document.querySelector("#" + p).value = ""
       }
-      if (p === "zoning_ord_date" && props[p] != "" && props[p] != null) {
+      if (p === "date_approved" && props[p] != "" && props[p] != null) {
         // console.log((props[p]).substring(10))
         document.querySelector("#" + p).value = (props[p]).substring(0,10)
       }else{
@@ -539,7 +533,7 @@ function inputFormModalSetValues(props) {
 //
 //MOVE THIS TO FETCH TABLE AGAIN AND REBUILD THE ZONING TABLE AND PARCEL PAINT TABLE - MAYBE JUST THIS ONLY FOR THE RECENT PARCEL
 //////////////////////////////////
-function zoningTableUpdate(data, table) {
+function globalStateUpdate(data, table) {
   
   var obj = paramsToObject(data)
   
@@ -571,67 +565,58 @@ function paramsToObject(entries) {
   return result;
 }
 
-//////////////////////////////////
-// RECYCLE BIN
-//////////////////////////////////
+/* -----------------
+>>>>NEW WORKFLOW<<<<
+1. CLICK POLYGON DRAW BUTTON - CHANGED IN JS TO SAY ADD NEW SITE PLAN
+2. DRAW BOUNDING BOX
+3. ON CREATE OPENS EDITING MODAL
+4. CHANGE PARCELNUM TO PARCELS, SEPARATED BY COMMAS
+5. AUTO ADD ADDRESS BY SELECTING ADDRESS OF CENTROID OF BOUNDING BOX AND PARCEL LAYER
+6. AUTO ADD AT LEAST ONE PARCEL BY SAME METHOD
+7. SAVE, ALSO SAVING CENTROID OF BOUNDING BOX
+8. ON SAVE DELETE ALL ITEMS DRAW
+9. ON CLICK OF SITE PLANS BOUNDS OPEN MODAL WINDOW TO EDIT - DISABLING TO FILE BUTTON AND REPLACING IT WITH FILE NAME
+------------------- */
 
+//TODO ADD OPTION TO DELETE FILE
+//TODO ADD OPTION TO CHANGE FILE
+//TODO ADD A SIDEBAR WITH LIST OF SITE PLANS
+//TODO ADD A SEARCH FOR SITE PLANS
+//TODO ADD A FILTER FOR SITE PLANS
 
-//////////////////////////////////
-// MAP PARCEL ID WHICH IS USED AS THE VECTOR TILE ID TO THE PARCEL NUMBER IN THE ZONING TABLE SO WE CAN USE THE MORE PERFORMANT FEATURE STATE
-//////////////////////////////////
-// function parcelIdMapToZoningTable(p, table) {
-//   var z = table.slice();
-//   var zIndex = new Array(z.length);
-//   for (var i = 0; i < p.length; i++) {
-//     var row = p[i];
-//     var id = row["i"].toString();
-//     var parcelnum = row.p;
+//EXAMPLE OF DRAWING A BOUNDING BOX USING CUSTOM MODE AND MAPBOX GL JS DRAW
+/*
+import { DrawRectangle } from "/assets/mapbox-gl-draw-rectangle-mode.js"
 
-//     for (var _i = 0; _i < z.length; _i++) {
-//       if (zIndex[_i] === -1) continue
-//       var zrow = z[_i];
-//       if (zrow.parcelnum === parcelnum) {
-//         zrow["parcelid"] = id;
-//         zIndex[_i] = -1;
-//         break
-//       }
-//     }
-//   }
-  // console.log(z)
-  
-  // p.map(row => {
-  //   var id,parcelnum;
-  //   id = row.id
-  //   parcelnum = row.parcelnum;
+var modes = MapboxDraw.modes;
 
-  //   z.map(zrow => {
-  //     // if (zIndex.indexOf(id) < 0) {
-  //       if (zrow.parcelnum === parcelnum) {
-  //         zrow["parcelid"] = id;
-  //         zIndex.push(id)
-  //       }
-  //     // }
-  //   })
-  // })
-  // return z
+modes.draw_rectangle = DrawRectangle;
 
-  // }
+var draw = new MapboxDraw({
+  modes: modes,
+  uerProperties: true
+});
+map.addControl(draw);
 
+//REMOVE ALL OTHER DRAW MODES EXCEPT POLYGON, THEN REPLACE WITH RECTANGLE WHEN ACTIVATED
+var drawTools = document.querySelectorAll(".mapbox-gl-draw_ctrl-draw-btn");
+Object.keys(drawTools).map(t => {
+  if (drawTools[t].classList.contains("mapbox-gl-draw_polygon") || drawTools[t].classList.contains("mapbox-gl-draw_trash")) {
 
-  //////////////////////////////////
-  // AFTER LAYERS ARE ADDED, LOOP THOUGH ZONING TABLE AND SET THE FEATURE STATE BASED ON MAPPED PARCEL ID
-  //////////////////////////////////
-  // console.log(zoningTable)
-  // zoningTable.map(z => {
-  //   if (z.parcelid) {
-  //     map.setFeatureState({
-  //       source: "parcelSource",
-  //       sourceLayer: "adm_mus_parcels",
-  //       id: z.parcelid
-  //     }, 
-  //     {
-  //       color: zoningPaintTable[z.zoning_code]
-  //     } 
-  //     )
-  //   }
-  // })
+  } else {
+    drawTools[t].style.display = "none"
+  }
+});
+
+map.on('draw.modechange', function () {
+  switch (draw.getMode()) {
+    case "draw_line_string": draw.changeMode('draw_rectangle');
+    case "draw_point": draw.changeMode('draw_rectangle');
+    case "draw_polygon": draw.changeMode('draw_rectangle');
+    default: null
+  }
+})
+
+map.on('draw.create', function (feature) {
+  console.log(feature);
+});*/
