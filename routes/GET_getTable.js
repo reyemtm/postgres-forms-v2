@@ -26,7 +26,8 @@ module.exports = function (fastify, opts, next) {
       "adm_mus_parcels",
       "trn_mus_centerlines",
       "utl_streets_sweeping_tracker",
-      "adm_mus_parcels"
+      "adm_mus_parcels",
+      "eng_gis_apps_config"
     ]
     if (!query.table || tables.indexOf(query.table) < 0) {
       res.status(404)
